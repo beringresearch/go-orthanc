@@ -10,7 +10,7 @@ import (
 
 // downloadCmd represents the download command
 var downloadCmd = &cobra.Command{
-	Use:   "download",
+	Use:   "download <studyId> [<studyId>...]",
 	Short: "Download a DICOM study to disk",
 	Long: `Download a DICOM study from the DICOMweb server to disk using its StudyInstanceUID.
 

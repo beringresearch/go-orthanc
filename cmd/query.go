@@ -10,7 +10,7 @@ import (
 
 // queryCmd represents the query command
 var queryCmd = &cobra.Command{
-	Use:   "query",
+	Use:   "query <studyId> [<studyId>...]",
 	Short: "Query for a DICOM study metadata",
 	Long: `Query a DICOM study metadata by StudyInstanceUID. The result will be saved to a JSON file.
 
