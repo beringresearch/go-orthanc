@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/suyashkumar/dicom"
 	"github.com/suyashkumar/dicom/pkg/tag"
+	"github.com/suyashkumar/dicom/pkg/uid"
 )
 
 func CreateStructuredReport(dicomPath string) error {
@@ -27,7 +28,6 @@ func CreateStructuredReport(dicomPath string) error {
 	}
 
 	const enhancedSRIOD = "1.2.840.10008.5.1.4.1.1.88.22"
-	const explicitVRLittleEndian = "1.2.840.10008.1.2.1"
 
 	const SRModality = "SR"
 	const manufacturer = "Bering Limited"
@@ -85,7 +85,7 @@ func CreateStructuredReport(dicomPath string) error {
 	if err != nil {
 		return err
 	}
-	transferSyntaxEle, err := dicom.NewElement(tag.TransferSyntaxUID, []string{explicitVRLittleEndian})
+	transferSyntaxEle, err := dicom.NewElement(tag.TransferSyntaxUID, []string{uid.ExplicitVRLittleEndian})
 	if err != nil {
 		return err
 	}
