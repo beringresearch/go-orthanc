@@ -203,6 +203,19 @@ func CreateStructuredReport(dicomPath string) error {
 	// seriesTime := ""
 	// contentTime := ""
 
+	// ---------------------------------------
+	// ----       Structured Report      -----
+	// ---------------------------------------
+	// Insert probabilities in a known format.
+	// Potential use of SR templates here: https://dicom.nema.org/medical/dicom/current/output/chtml/part16/sect_ChestCADSRIODTemplates.html
+	// For now keeping it as simple as possible - like a "JSON" of classification probabilities.
+	// Front-end should expect this and be able to parse it
+
+	sr, err := generateSR()
+	if err != nil {
+		return err
+	}
+
 	// Generate series datetimes
 
 	structuredReport := dicom.Dataset{
@@ -232,6 +245,7 @@ func CreateStructuredReport(dicomPath string) error {
 			contentDateEle,
 			seriesTimeEle,
 			contentTimeEle,
+			sr,
 		},
 	}
 
@@ -261,4 +275,52 @@ func generateUUID() (string, error) {
 	idInt.SetBytes(idBinary)
 
 	return fmt.Sprintf("2.25.%d", idInt), nil
+}
+
+func generateSR() (*dicom.Element, error) {
+
+	var measurementUnitCodeSequence []*dicom.Element
+
+	codeValueEle, err := dicom.NewElement(tag.CodeValue, []string{"probability"})
+	if err != nil {
+		return nil, err
+	}
+	// TODO: define the schema we are using - private one?
+	// codingSchemeDesignatorEle, err := dicom.NewElement(tag.CodingSchemeDesignator, []string{"UCUM"})
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// codingSchemeVersionEle, err := dicom.NewElement(tag.CodingSchemeVersion, []string{"1.4"})
+	// if err != nil {
+	// 	return nil, err
+	// }
+	codeMeaningEle, err := dicom.NewElement(tag.CodeMeaning, []string{"abnormality classification"})
+	if err != nil {
+		return nil, err
+	}
+
+	measurementUnitCodeSequence = append(measurementUnitCodeSequence, codeValueEle)
+	// measurementUnitCodeSequence = append(measurementUnitCodeSequence, codingSchemeDesignatorEle)
+	// measurementUnitCodeSequence = append(measurementUnitCodeSequence, codingSchemeVersionEle)
+	measurementUnitCodeSequence = append(measurementUnitCodeSequence, codeMeaningEle)
+
+	// MeasuredValueSequence contains MeasurementUnitCodeSequence and NumericValue
+	numericValueEle, err := dicom.NewElement(tag.NumericValue, []string{"0.75"})
+	if err != nil {
+		return nil, err
+	}
+
+	var measuredValueSequence []*dicom.Element
+	measuredValueSequence = append(measuredValueSequence, measurementUnitCodeSequence...)
+	measuredValueSequence = append(measuredValueSequence, numericValueEle)
+
+	measuredValueSequenceEle, err := dicom.NewElement(
+		tag.MeasuredValueSequence,
+		[][]*dicom.Element{measuredValueSequence},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return measuredValueSequenceEle, nil
 }
