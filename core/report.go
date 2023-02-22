@@ -338,9 +338,31 @@ func generateSR() (*dicom.Element, error) {
 	measuredValueSequence = append(measuredValueSequence, measurementUnitCodeSequence...)
 	measuredValueSequence = append(measuredValueSequence, numericValueEle)
 
+	// Second probability class
+	var measurementUnitCodeSequence2 []*dicom.Element
+	codeValueEle2, err := dicom.NewElement(tag.CodeValue, []string{"probability"})
+	if err != nil {
+		return nil, err
+	}
+	codeMeaningEle2, err := dicom.NewElement(tag.CodeMeaning, []string{"normality classification"})
+	if err != nil {
+		return nil, err
+	}
+	measurementUnitCodeSequence2 = append(measurementUnitCodeSequence2, codeValueEle2)
+	measurementUnitCodeSequence2 = append(measurementUnitCodeSequence2, codeMeaningEle2)
+
+	numericValueEle2, err := dicom.NewElement(tag.NumericValue, []string{"0.25"})
+	if err != nil {
+		return nil, err
+	}
+
+	var measuredValueSequence2 []*dicom.Element
+	measuredValueSequence2 = append(measuredValueSequence2, measurementUnitCodeSequence2...)
+	measuredValueSequence2 = append(measuredValueSequence2, numericValueEle2)
+
 	measuredValueSequenceEle, err := dicom.NewElement(
 		tag.MeasuredValueSequence,
-		[][]*dicom.Element{measuredValueSequence},
+		[][]*dicom.Element{measuredValueSequence, measuredValueSequence2},
 	)
 	if err != nil {
 		return nil, err
