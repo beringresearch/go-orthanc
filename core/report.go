@@ -29,12 +29,6 @@ func CreateStructuredReport(dicomPath string) error {
 
 	const enhancedSRIOD = "1.2.840.10008.5.1.4.1.1.88.22"
 
-	const SRModality = "SR"
-	const manufacturer = "Bering Limited"
-	const seriesDescription = "AI derived series"
-	const manufacturerModelName = "BraveCX"
-	const softwareVersions = "1.0.0"
-
 	// // StudyDate from original DICOM
 	// studyInstanceUID := ""
 	// studyID := ""
@@ -72,6 +66,10 @@ func CreateStructuredReport(dicomPath string) error {
 		return err
 	}
 	defer outFile.Close()
+
+	// ---------------------------------------
+	// -------  DICOM header metadata --------
+	// ---------------------------------------
 
 	metadataVerEle, err := dicom.NewElement(tag.FileMetaInformationVersion, []byte{01})
 	if err != nil {
@@ -196,12 +194,33 @@ func CreateStructuredReport(dicomPath string) error {
 		return err
 	}
 
-	// seriesNumber := "99"
-	// instanceNumber := "1"
-	// seriesDate := ""
-	// contentDate := ""
-	// seriesTime := ""
-	// contentTime := ""
+	// Constant fields
+	const SRModality = "SR"
+	const manufacturer = "Bering Limited"
+	const seriesDescription = "AI derived series"
+	const manufacturerModelName = "BraveCX"
+	const softwareVersions = "1.0.0"
+
+	modalityEle, err := dicom.NewElement(tag.Modality, []string{SRModality})
+	if err != nil {
+		return err
+	}
+	manufacturerEle, err := dicom.NewElement(tag.Manufacturer, []string{manufacturer})
+	if err != nil {
+		return err
+	}
+	seriesDescriptionEle, err := dicom.NewElement(tag.SeriesDescription, []string{seriesDescription})
+	if err != nil {
+		return err
+	}
+	manufacturerModelNameEle, err := dicom.NewElement(tag.ManufacturerModelName, []string{manufacturerModelName})
+	if err != nil {
+		return err
+	}
+	softwareVersionsEle, err := dicom.NewElement(tag.SoftwareVersions, []string{softwareVersions})
+	if err != nil {
+		return err
+	}
 
 	// ---------------------------------------
 	// ----       Structured Report      -----
@@ -245,6 +264,11 @@ func CreateStructuredReport(dicomPath string) error {
 			contentDateEle,
 			seriesTimeEle,
 			contentTimeEle,
+			modalityEle,
+			manufacturerEle,
+			seriesDescriptionEle,
+			manufacturerModelNameEle,
+			softwareVersionsEle,
 			sr,
 		},
 	}
