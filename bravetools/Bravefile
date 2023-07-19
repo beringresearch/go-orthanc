@@ -1,0 +1,43 @@
+image: orthanc/1.10.0
+base:
+  image: ubuntu/focal
+  location: public
+packages:
+  manager: apt
+  system:
+  - orthanc
+  - orthanc-dicomweb
+  - git
+  - wget
+run:
+- command: sh
+  args:
+  - -c
+  - bash download_go.sh
+- command: sh
+  args:
+  - -c
+  - bash populate_orthanc.sh
+copy:
+- source: download_go.sh
+  target: /root/
+  action: chmod +x /root/download_go.sh
+- source: dcm_file_list.txt
+  target: /root/
+  action: chmod +x /root/download_go.sh
+- source: populate_orthanc.sh
+  target: /root/
+  action: chmod +x /root/populate_orthanc.sh
+- source: orthanc.env
+  target: /root/
+  action: chmod +x /root/populate_orthanc.sh
+service:
+  image: orthanc/1.10.0
+  name: orthanc
+  docker: "no"
+  ports:
+  - 8042:8042
+  resources:
+    ram: 4GB
+    cpu: 2
+    gpu: "no"
