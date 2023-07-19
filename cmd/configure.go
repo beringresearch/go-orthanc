@@ -14,7 +14,9 @@ import (
 var configureCmd = &cobra.Command{
 	Use:   "configure",
 	Short: "Configure the DICOMweb service settings",
-	Long: `Interactively configure the DICOMweb service settings through CLI.
+	Long: `Configure the DICOMweb service settings through CLI.
+Either a valid URL or an empty string can be passed.
+If an empty string is passed, URL will be configured interactively.
 When prompted enter the URL of the DICOMweb server in full, including scheme, port, etc.
 Example:
 
@@ -22,7 +24,10 @@ dicomweb-cli configure
 > Enter the DICOMweb server URL: http://localhost:8042/dicom-web
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		createConfig()
+		if len(args) == 0 {
+			createConfig("")
+		}
+		createConfig(args[0])
 	},
 }
 
@@ -38,7 +43,7 @@ func ensureConfigured(cmd *cobra.Command, args []string) {
 		if !core.ConfigExists() {
 			fmt.Println("No DICOMweb server config found, creating one...")
 			fmt.Println()
-			createConfig()
+			createConfig("")
 		}
 
 	}
@@ -46,10 +51,11 @@ func ensureConfigured(cmd *cobra.Command, args []string) {
 
 // createConfig prompts the user for DICOMweb server settings and saves
 // the config settings in the home directory
-func createConfig() {
-	var serverUrl string
-	fmt.Print("> Enter the DICOMweb server URL: ")
-	fmt.Scanln(&serverUrl)
+func createConfig(serverUrl string) {
+	if serverUrl == "" {
+		fmt.Print("> Enter the DICOMweb server URL: ")
+		fmt.Scanln(&serverUrl)
+	}
 
 	err := validateURL(serverUrl)
 	if err != nil {
