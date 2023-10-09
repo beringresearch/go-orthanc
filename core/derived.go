@@ -3,9 +3,13 @@ package core
 import (
 	"bufio"
 	"fmt"
-	"image/png"
+	"image"
 	"os"
 	"time"
+
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 
 	"github.com/suyashkumar/dicom"
 	"github.com/suyashkumar/dicom/pkg/frame"
@@ -271,7 +275,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	}
 	bufRead := bufio.NewReader(imgFile)
 
-	img, err := png.Decode(bufRead)
+	img, _, err := image.Decode(bufRead)
 	if err != nil {
 		return err
 	}
