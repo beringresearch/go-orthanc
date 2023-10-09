@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bufio"
 	"fmt"
 	"math/big"
 	"os"
@@ -105,11 +106,11 @@ func CreateStructuredReport(dicomPath string) error {
 		return err
 	}
 
-	// ---------------------------------------
-	// ----  Pulled from original DICOM ------
-	// ---------------------------------------
+	// // ---------------------------------------
+	// // ----  Pulled from original DICOM ------
+	// // ---------------------------------------
 
-	// TODO: handle missing tags
+	// // TODO: handle missing tags
 
 	// Study fields
 	studyInstanceUIDEle, err := ds.FindElementByTag(tag.StudyInstanceUID)
@@ -273,7 +274,14 @@ func CreateStructuredReport(dicomPath string) error {
 		},
 	}
 
-	err = dicom.Write(outFile, structuredReport)
+	bufOut := bufio.NewWriter(outFile)
+
+	err = dicom.Write(bufOut, structuredReport)
+	if err != nil {
+		return err
+	}
+
+	err = bufOut.Flush()
 	if err != nil {
 		return err
 	}
