@@ -3,14 +3,12 @@ package core
 import (
 	"bufio"
 	"os"
-	"time"
 
 	"github.com/suyashkumar/dicom"
 	"github.com/suyashkumar/dicom/pkg/tag"
-	"github.com/suyashkumar/dicom/pkg/uid"
 )
 
-func CreateStructuredReport(dicomPath string) error {
+func CreateStructuredReport(dicomPath string, outPath string) error {
 	f, err := os.Open(dicomPath)
 	if err != nil {
 		return err
@@ -25,200 +23,33 @@ func CreateStructuredReport(dicomPath string) error {
 		return err
 	}
 
-	const enhancedSRIOD = "1.2.840.10008.5.1.4.1.1.88.22"
-
-	// // StudyDate from original DICOM
-	// studyInstanceUID := ""
-	// studyID := ""
-	// studyDate := ""
-	// studyTime := ""
-
-	// accessionNumber := ""
-	// patientName := ""
-	// patientID := ""
-	// patientBirthDate := ""
-	// patientSex := ""
-	// patientAge := ""
-
-	// // Series date is new - current date
-	// seriesInstanceUID := ""
-	// seriesNumber := "99"
-	// instanceNumber := "1"
-	// seriesDate := ""
-	// contentDate := ""
-	// seriesTime := ""
-	// contentTime := ""
-
-	// SOPInstanceUID := "2.25.116240234176243277889131258530491654266"
-	SOPInstanceUID, err := generateUUID()
+	// Gather derived DICOM elements
+	headerElements, err := derivedHeaderElements(enhancedSRIOD)
 	if err != nil {
 		return err
 	}
-	seriesInstanceUID, err := generateUUID()
+	derivedElements, err := derivedMetadata(ds)
+	if err != nil {
+		return err
+	}
+	generatedElements, err := generateInstanceMetadata(srModality)
 	if err != nil {
 		return err
 	}
 
-	outFile, err := os.Create("test_sr.dcm")
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	// ---------------------------------------
-	// -------  DICOM header metadata --------
-	// ---------------------------------------
-
-	metadataVerEle, err := dicom.NewElement(tag.FileMetaInformationVersion, []byte{01})
-	if err != nil {
-		return err
-	}
-	metadataSOPClassUIDEle, err := dicom.NewElement(tag.MediaStorageSOPClassUID, []string{enhancedSRIOD})
-	if err != nil {
-		return err
-	}
-	metadataSOPInstanceUIDEle, err := dicom.NewElement(tag.MediaStorageSOPInstanceUID, []string{SOPInstanceUID})
-	if err != nil {
-		return err
-	}
-	transferSyntaxEle, err := dicom.NewElement(tag.TransferSyntaxUID, []string{uid.ExplicitVRLittleEndian})
-	if err != nil {
-		return err
-	}
-	// TODO
-	// implementationClassUIDEle, err := dicom.NewElement(tag.ImplementationClassUID, []string{"1.2.276.0.7230010.3.0.3.6.6"})
-	// if err != nil {
-	// 	return err
-	// }
-	// implementationVersionNameEle, err := dicom.NewElement(tag.ImplementationVersionName, []string{"OFFIS_DCMTK_366"})
-	// if err != nil {
-	// 	return err
-	// }
-	sopInstanceUIDEle, err := dicom.NewElement(tag.SOPInstanceUID, []string{SOPInstanceUID})
-	if err != nil {
-		return err
-	}
-	sopClassUIDEle, err := dicom.NewElement(tag.SOPClassUID, []string{enhancedSRIOD})
+	sr, err := generateSR()
 	if err != nil {
 		return err
 	}
 
-	// // ---------------------------------------
-	// // ----  Pulled from original DICOM ------
-	// // ---------------------------------------
-
-	// // TODO: handle missing tags
-
-	// Study fields
-	studyInstanceUIDEle, err := ds.FindElementByTag(tag.StudyInstanceUID)
-	if err != nil {
-		return err
+	// Assemble derived dataset from elements
+	derivedDicom := dicom.Dataset{
+		Elements: []*dicom.Element{},
 	}
-	studyInstanceIDEle, err := ds.FindElementByTag(tag.StudyID)
-	if err != nil {
-		return err
-	}
-	studyDateEle, err := ds.FindElementByTag(tag.StudyDate)
-	if err != nil {
-		return err
-	}
-	studyTimeEle, err := ds.FindElementByTag(tag.StudyTime)
-	if err != nil {
-		return err
-	}
-
-	// Patient fields
-	accessionNumberEle, err := ds.FindElementByTag(tag.AccessionNumber)
-	if err != nil {
-		return err
-	}
-	patientNameEle, err := ds.FindElementByTag(tag.PatientName)
-	if err != nil {
-		return err
-	}
-	patientIDEle, err := ds.FindElementByTag(tag.PatientID)
-	if err != nil {
-		return err
-	}
-	patientBirthDateEle, err := ds.FindElementByTag(tag.PatientBirthDate)
-	if err != nil {
-		return err
-	}
-	patientSexEle, err := ds.FindElementByTag(tag.PatientSex)
-	if err != nil {
-		return err
-	}
-	// patientAgeEle, err := ds.FindElementByTag(tag.PatientAge)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// ---------------------------------------
-	// ----       Generated fields      ------
-	// ---------------------------------------
-
-	// Generate series datetimes
-	currentTime := time.Now()
-	currentDate := currentTime.Format("20060602")           // yyyyMMdd
-	currentTimestamp := currentTime.Format("150405.000000") // HHmmss.SSSSSS
-
-	seriesInstanceUIDEle, err := dicom.NewElement(tag.SeriesInstanceUID, []string{seriesInstanceUID})
-	if err != nil {
-		return err
-	}
-	// TODO - way to find this out?
-	seriesNumberEle, err := dicom.NewElement(tag.SeriesNumber, []string{"99"})
-	if err != nil {
-		return err
-	}
-	instanceNumberEle, err := dicom.NewElement(tag.InstanceNumber, []string{"1"})
-	if err != nil {
-		return err
-	}
-	seriesDateEle, err := dicom.NewElement(tag.SeriesDate, []string{currentDate})
-	if err != nil {
-		return err
-	}
-	contentDateEle, err := dicom.NewElement(tag.ContentDate, []string{currentDate})
-	if err != nil {
-		return err
-	}
-	seriesTimeEle, err := dicom.NewElement(tag.SeriesTime, []string{currentTimestamp})
-	if err != nil {
-		return err
-	}
-	contentTimeEle, err := dicom.NewElement(tag.ContentTime, []string{currentTimestamp})
-	if err != nil {
-		return err
-	}
-
-	// Constant fields
-	const SRModality = "SR"
-	const manufacturer = "Bering Limited"
-	const seriesDescription = "AI derived series"
-	const manufacturerModelName = "BraveCX"
-	const softwareVersions = "1.0.0"
-
-	modalityEle, err := dicom.NewElement(tag.Modality, []string{SRModality})
-	if err != nil {
-		return err
-	}
-	manufacturerEle, err := dicom.NewElement(tag.Manufacturer, []string{manufacturer})
-	if err != nil {
-		return err
-	}
-	seriesDescriptionEle, err := dicom.NewElement(tag.SeriesDescription, []string{seriesDescription})
-	if err != nil {
-		return err
-	}
-	manufacturerModelNameEle, err := dicom.NewElement(tag.ManufacturerModelName, []string{manufacturerModelName})
-	if err != nil {
-		return err
-	}
-	softwareVersionsEle, err := dicom.NewElement(tag.SoftwareVersions, []string{softwareVersions})
-	if err != nil {
-		return err
-	}
+	derivedDicom.Elements = append(derivedDicom.Elements, headerElements...)
+	derivedDicom.Elements = append(derivedDicom.Elements, derivedElements...)
+	derivedDicom.Elements = append(derivedDicom.Elements, generatedElements...)
+	derivedDicom.Elements = append(derivedDicom.Elements, sr)
 
 	// ---------------------------------------
 	// ----       Structured Report      -----
@@ -228,52 +59,16 @@ func CreateStructuredReport(dicomPath string) error {
 	// For now keeping it as simple as possible - like a "JSON" of classification probabilities.
 	// Front-end should expect this and be able to parse it
 
-	sr, err := generateSR()
+	// Write out dataset
+	outFile, err := os.Create(outPath)
 	if err != nil {
 		return err
 	}
-
-	// Generate series datetimes
-
-	structuredReport := dicom.Dataset{
-		Elements: []*dicom.Element{
-			metadataVerEle,
-			metadataSOPClassUIDEle,
-			metadataSOPInstanceUIDEle,
-			transferSyntaxEle,
-			// implementationClassUIDEle,
-			// implementationVersionNameEle,
-			sopInstanceUIDEle,
-			sopClassUIDEle,
-			studyInstanceUIDEle,
-			studyInstanceIDEle,
-			studyDateEle,
-			studyTimeEle,
-			accessionNumberEle,
-			patientNameEle,
-			patientIDEle,
-			patientBirthDateEle,
-			patientSexEle,
-			// patientAgeEle,
-			seriesInstanceUIDEle,
-			seriesNumberEle,
-			seriesDateEle,
-			instanceNumberEle,
-			contentDateEle,
-			seriesTimeEle,
-			contentTimeEle,
-			modalityEle,
-			manufacturerEle,
-			seriesDescriptionEle,
-			manufacturerModelNameEle,
-			softwareVersionsEle,
-			sr,
-		},
-	}
+	defer outFile.Close()
 
 	bufOut := bufio.NewWriter(outFile)
 
-	err = dicom.Write(bufOut, structuredReport)
+	err = dicom.Write(bufOut, derivedDicom)
 	if err != nil {
 		return err
 	}
