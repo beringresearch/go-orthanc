@@ -33,110 +33,50 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		return err
 	}
 
-	const digitalXrIOD = "1.2.840.10008.5.1.4.1.1.1.1"
+	// Add image to derived DICOM
+	imgFile, err := os.Open(imagePath)
+	if err != nil {
+		return err
+	}
+	defer imgFile.Close()
 
-	SOPInstanceUID, err := generateUUID()
+	// Gather DICOM elements
+	headerElements, err := derivedHeaderElements()
+	if err != nil {
+		return err
+	}
+	derivedElements, err := derivedMetadata(ds)
+	if err != nil {
+		return err
+	}
+	generatedElements, err := generateInstanceMetadata()
+	if err != nil {
+		return err
+	}
+	imageElements, err := imageToDicomElements(imgFile)
 	if err != nil {
 		return err
 	}
 
+	// Assemble derived dataset from elements
+	derivedDicom := dicom.Dataset{
+		Elements: []*dicom.Element{},
+	}
+	derivedDicom.Elements = append(derivedDicom.Elements, headerElements...)
+	derivedDicom.Elements = append(derivedDicom.Elements, derivedElements...)
+	derivedDicom.Elements = append(derivedDicom.Elements, generatedElements...)
+	derivedDicom.Elements = append(derivedDicom.Elements, imageElements...)
+
+	// Write out dataset
 	outFile, err := os.Create(outPath)
 	if err != nil {
 		return err
 	}
 	defer outFile.Close()
 
-	// ---------------------------------------
-	// -------  DICOM header metadata --------
-	// ---------------------------------------
-
-	metadataVerEle, err := dicom.NewElement(tag.FileMetaInformationVersion, []byte{01})
-	if err != nil {
-		return err
-	}
-	metadataSOPClassUIDEle, err := dicom.NewElement(tag.MediaStorageSOPClassUID, []string{digitalXrIOD})
-	if err != nil {
-		return err
-	}
-	metadataSOPInstanceUIDEle, err := dicom.NewElement(tag.MediaStorageSOPInstanceUID, []string{SOPInstanceUID})
-	if err != nil {
-		return err
-	}
-	transferSyntaxEle, err := dicom.NewElement(tag.TransferSyntaxUID, []string{uid.ExplicitVRLittleEndian})
-	if err != nil {
-		return err
-	}
-	// TODO
-	// implementationClassUIDEle, err := dicom.NewElement(tag.ImplementationClassUID, []string{"1.2.276.0.7230010.3.0.3.6.6"})
-	// if err != nil {
-	// 	return err
-	// }
-	// implementationVersionNameEle, err := dicom.NewElement(tag.ImplementationVersionName, []string{"OFFIS_DCMTK_366"})
-	// if err != nil {
-	// 	return err
-	// }
-	sopInstanceUIDEle, err := dicom.NewElement(tag.SOPInstanceUID, []string{SOPInstanceUID})
-	if err != nil {
-		return err
-	}
-	sopClassUIDEle, err := dicom.NewElement(tag.SOPClassUID, []string{digitalXrIOD})
-	if err != nil {
-		return err
-	}
-
-	// // ---------------------------------------
-	// // ----  Pulled from original DICOM ------
-	// // ---------------------------------------
-
-	derivedElements, err := derivedMetadata(ds)
-	if err != nil {
-		return err
-	}
-
-	// ---------------------------------------
-	// ----       Generated fields      ------
-	// ---------------------------------------
-
-	generatedElements, err := generateInstanceMetadata()
-	if err != nil {
-		return err
-	}
-
-	// ---------------------------------------
-	// ----        Derived image         -----
-	// ---------------------------------------
-
-	derivedImage := dicom.Dataset{
-		Elements: []*dicom.Element{
-			metadataVerEle,
-			metadataSOPClassUIDEle,
-			metadataSOPInstanceUIDEle,
-			transferSyntaxEle,
-			// implementationClassUIDEle,
-			// implementationVersionNameEle,
-			sopInstanceUIDEle,
-			sopClassUIDEle,
-		},
-	}
-
-	// Add image to derived DICOM
-	imgFile, err := os.Open(imagePath)
-	if err != nil {
-		return err
-	}
-
-	imageElements, err := imageToDicomElements(imgFile)
-	if err != nil {
-		return err
-	}
-
-	derivedImage.Elements = append(derivedImage.Elements, derivedElements...)
-	derivedImage.Elements = append(derivedImage.Elements, generatedElements...)
-	derivedImage.Elements = append(derivedImage.Elements, imageElements...)
-
 	bufOut := bufio.NewWriter(outFile)
 
-	err = dicom.Write(bufOut, derivedImage)
+	err = dicom.Write(bufOut, derivedDicom)
 	if err != nil {
 		return err
 	}
@@ -151,6 +91,66 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	}
 
 	return nil
+}
+
+// derivedHeaderElements creates the header elements for a derived DICOM file.
+// It sets up the header to assist parsing of the DICOM, including elements
+// marking the byte order and how the DICOM is to be interpreted.
+func derivedHeaderElements() ([]*dicom.Element, error) {
+	const digitalXrIOD = "1.2.840.10008.5.1.4.1.1.1.1"
+
+	SOPInstanceUID, err := generateUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	metadataVerEle, err := dicom.NewElement(tag.FileMetaInformationVersion, []byte{01})
+	if err != nil {
+		return nil, err
+	}
+	metadataSOPClassUIDEle, err := dicom.NewElement(tag.MediaStorageSOPClassUID, []string{digitalXrIOD})
+	if err != nil {
+		return nil, err
+	}
+	metadataSOPInstanceUIDEle, err := dicom.NewElement(tag.MediaStorageSOPInstanceUID, []string{SOPInstanceUID})
+	if err != nil {
+		return nil, err
+	}
+	transferSyntaxEle, err := dicom.NewElement(tag.TransferSyntaxUID, []string{uid.ExplicitVRLittleEndian})
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO
+	// implementationClassUIDEle, err := dicom.NewElement(tag.ImplementationClassUID, []string{"1.2.276.0.7230010.3.0.3.6.6"})
+	// if err != nil {
+	// 	return err
+	// }
+	// implementationVersionNameEle, err := dicom.NewElement(tag.ImplementationVersionName, []string{"OFFIS_DCMTK_366"})
+	// if err != nil {
+	// 	return err
+	// }
+	sopInstanceUIDEle, err := dicom.NewElement(tag.SOPInstanceUID, []string{SOPInstanceUID})
+	if err != nil {
+		return nil, err
+	}
+	sopClassUIDEle, err := dicom.NewElement(tag.SOPClassUID, []string{digitalXrIOD})
+	if err != nil {
+		return nil, err
+	}
+
+	headerElements := []*dicom.Element{
+		metadataVerEle,
+		metadataSOPClassUIDEle,
+		metadataSOPInstanceUIDEle,
+		transferSyntaxEle,
+		// implementationClassUIDEle,
+		// implementationVersionNameEle,
+		sopInstanceUIDEle,
+		sopClassUIDEle,
+	}
+
+	return headerElements, nil
 }
 
 // generateInstanceMetadata generates new DICOM elements for a new instance. It creates unique IDs
