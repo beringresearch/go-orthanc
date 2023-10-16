@@ -34,29 +34,6 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 
 	const digitalXrIOD = "1.2.840.10008.5.1.4.1.1.1.1"
 
-	// // StudyDate from original DICOM
-	// studyInstanceUID := ""
-	// studyID := ""
-	// studyDate := ""
-	// studyTime := ""
-
-	// accessionNumber := ""
-	// patientName := ""
-	// patientID := ""
-	// patientBirthDate := ""
-	// patientSex := ""
-	// patientAge := ""
-
-	// // Series date is new - current date
-	// seriesInstanceUID := ""
-	// seriesNumber := "99"
-	// instanceNumber := "1"
-	// seriesDate := ""
-	// contentDate := ""
-	// seriesTime := ""
-	// contentTime := ""
-
-	// SOPInstanceUID := "2.25.116240234176243277889131258530491654266"
 	SOPInstanceUID, err := generateUUID()
 	if err != nil {
 		return err
@@ -230,8 +207,6 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	// ---------------------------------------
 	// ----        Derived image         -----
 	// ---------------------------------------
-
-	// Generate series datetimes
 
 	derivedImage := dicom.Dataset{
 		Elements: []*dicom.Element{

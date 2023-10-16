@@ -10,6 +10,7 @@ import (
 // UUID-based UID generation
 // https://stackoverflow.com/questions/10295792/how-to-generate-sopinstance-uid-for-dicom-file
 // https://stackoverflow.com/questions/46304306/how-to-generate-unique-dicom-uid
+// For example: "2.25.116240234176243277889131258530491654266"
 func generateUUID() (string, error) {
 	id := uuid.New()
 	idBinary, err := id.MarshalBinary()
