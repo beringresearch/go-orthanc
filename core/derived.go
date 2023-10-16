@@ -159,15 +159,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return err
 	}
-	seriesDateEle, err := dicom.NewElement(tag.SeriesDate, []string{currentDate})
-	if err != nil {
-		return err
-	}
 	contentDateEle, err := dicom.NewElement(tag.ContentDate, []string{currentDate})
-	if err != nil {
-		return err
-	}
-	seriesTimeEle, err := dicom.NewElement(tag.SeriesTime, []string{currentTimestamp})
 	if err != nil {
 		return err
 	}
@@ -230,10 +222,8 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 			// patientAgeEle,
 			seriesInstanceUIDEle,
 			seriesNumberEle,
-			seriesDateEle,
 			instanceNumberEle,
 			contentDateEle,
-			seriesTimeEle,
 			contentTimeEle,
 			modalityEle,
 			manufacturerEle,
