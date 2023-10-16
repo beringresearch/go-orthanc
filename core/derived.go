@@ -244,8 +244,10 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return err
 	}
-	rows := img.Bounds().Max.Y
-	cols := img.Bounds().Max.X
+
+	b := img.Bounds()
+	rows := b.Dy()
+	cols := b.Dx()
 	bitsAllocated := 8
 	bitsStored := 8
 	highBit := bitsStored - 1
@@ -263,18 +265,20 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	}
 
 	// Fill pixel values
-	for i := 0; i < rows*cols; i++ {
-		row := i / cols
-		col := i % cols
-		pixel := img.At(col, row)
-		r, g, b, _ := pixel.RGBA()
-		r_8bit := r >> 8
-		g_8bit := g >> 8
-		b_8bit := b >> 8
-		pixelDataInfo.Frames[0].NativeData.Data[i] = []int{
-			int(r_8bit),
-			int(g_8bit),
-			int(b_8bit),
+	i := 0
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			pixel := img.At(x, y)
+			r, g, b, _ := pixel.RGBA()
+			r_8bit := r >> 8
+			g_8bit := g >> 8
+			b_8bit := b >> 8
+			pixelDataInfo.Frames[0].NativeData.Data[i] = []int{
+				int(r_8bit),
+				int(g_8bit),
+				int(b_8bit),
+			}
+			i++
 		}
 	}
 
