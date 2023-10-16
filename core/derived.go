@@ -326,10 +326,10 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return fmt.Errorf("failed to add pixel rep element: %s", err)
 	}
-	// numFramesEle, err := dicom.NewElement(tag.NumberOfFrames, []int{1})
-	// if err != nil {
-	// 	return fmt.Errorf("failed to add numFrames element: %s", err)
-	// }
+	numFramesEle, err := dicom.NewElement(tag.NumberOfFrames, []string{"1"})
+	if err != nil {
+		return fmt.Errorf("failed to add numFrames element: %s", err)
+	}
 	photometricEle, err := dicom.NewElement(tag.PhotometricInterpretation, []string{"RGB"})
 	if err != nil {
 		return fmt.Errorf("failed to add photometric interpretation element: %s", err)
@@ -351,7 +351,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		bitsAllocEle,
 		bitsStoredEle,
 		highBitEle,
-		// numFramesEle,
+		numFramesEle,
 		photometricEle,
 		pixelDataEle,
 	)
