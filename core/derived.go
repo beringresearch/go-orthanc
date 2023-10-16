@@ -39,10 +39,6 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return err
 	}
-	seriesInstanceUID, err := generateUUID()
-	if err != nil {
-		return err
-	}
 
 	outFile, err := os.Create(outPath)
 	if err != nil {
@@ -101,57 +97,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	// ----       Generated fields      ------
 	// ---------------------------------------
 
-	// Generate series datetimes
-	currentTime := time.Now()
-	currentDate := currentTime.Format("20060602")           // yyyyMMdd
-	currentTimestamp := currentTime.Format("150405.000000") // HHmmss.SSSSSS
-
-	seriesInstanceUIDEle, err := dicom.NewElement(tag.SeriesInstanceUID, []string{seriesInstanceUID})
-	if err != nil {
-		return err
-	}
-	// Assume the new generated generated DICOM is the first and only in its sequence (since seriesIntaceUID is newly generated)
-	seriesNumberEle, err := dicom.NewElement(tag.SeriesNumber, []string{"1"})
-	if err != nil {
-		return err
-	}
-	instanceNumberEle, err := dicom.NewElement(tag.InstanceNumber, []string{"1"})
-	if err != nil {
-		return err
-	}
-	contentDateEle, err := dicom.NewElement(tag.ContentDate, []string{currentDate})
-	if err != nil {
-		return err
-	}
-	contentTimeEle, err := dicom.NewElement(tag.ContentTime, []string{currentTimestamp})
-	if err != nil {
-		return err
-	}
-
-	// Constant fields
-	const XRModality = "DX"
-	const manufacturer = "Bering Limited"
-	const seriesDescription = "AI derived series"
-	const manufacturerModelName = "BraveCX"
-	const softwareVersions = "1.0.0"
-
-	modalityEle, err := dicom.NewElement(tag.Modality, []string{XRModality})
-	if err != nil {
-		return err
-	}
-	manufacturerEle, err := dicom.NewElement(tag.Manufacturer, []string{manufacturer})
-	if err != nil {
-		return err
-	}
-	seriesDescriptionEle, err := dicom.NewElement(tag.SeriesDescription, []string{seriesDescription})
-	if err != nil {
-		return err
-	}
-	manufacturerModelNameEle, err := dicom.NewElement(tag.ManufacturerModelName, []string{manufacturerModelName})
-	if err != nil {
-		return err
-	}
-	softwareVersionsEle, err := dicom.NewElement(tag.SoftwareVersions, []string{softwareVersions})
+	generatedElements, err := generateInstanceMetadata()
 	if err != nil {
 		return err
 	}
@@ -170,16 +116,6 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 			// implementationVersionNameEle,
 			sopInstanceUIDEle,
 			sopClassUIDEle,
-			seriesInstanceUIDEle,
-			seriesNumberEle,
-			instanceNumberEle,
-			contentDateEle,
-			contentTimeEle,
-			modalityEle,
-			manufacturerEle,
-			seriesDescriptionEle,
-			manufacturerModelNameEle,
-			softwareVersionsEle,
 		},
 	}
 
@@ -195,6 +131,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	}
 
 	derivedImage.Elements = append(derivedImage.Elements, derivedElements...)
+	derivedImage.Elements = append(derivedImage.Elements, generatedElements...)
 	derivedImage.Elements = append(derivedImage.Elements, imageElements...)
 
 	bufOut := bufio.NewWriter(outFile)
@@ -214,6 +151,86 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	}
 
 	return nil
+}
+
+// generateInstanceMetadata generates new DICOM elements for a new instance. It creates unique IDs
+// and uses the current timestamp to mark content date and time.
+// Constant elements relating to product information are also embedded here (manufacturer etc.)
+func generateInstanceMetadata() ([]*dicom.Element, error) {
+	seriesInstanceUID, err := generateUUID()
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate series datetimes
+	currentTime := time.Now()
+	currentDate := currentTime.Format("20060602")           // yyyyMMdd
+	currentTimestamp := currentTime.Format("150405.000000") // HHmmss.SSSSSS
+
+	seriesInstanceUIDEle, err := dicom.NewElement(tag.SeriesInstanceUID, []string{seriesInstanceUID})
+	if err != nil {
+		return nil, err
+	}
+	// Assume the new generated generated DICOM is the first and only in its sequence (since seriesIntaceUID is newly generated)
+	seriesNumberEle, err := dicom.NewElement(tag.SeriesNumber, []string{"1"})
+	if err != nil {
+		return nil, err
+	}
+	instanceNumberEle, err := dicom.NewElement(tag.InstanceNumber, []string{"1"})
+	if err != nil {
+		return nil, err
+	}
+	contentDateEle, err := dicom.NewElement(tag.ContentDate, []string{currentDate})
+	if err != nil {
+		return nil, err
+	}
+	contentTimeEle, err := dicom.NewElement(tag.ContentTime, []string{currentTimestamp})
+	if err != nil {
+		return nil, err
+	}
+
+	// Constant fields
+	const XRModality = "DX"
+	const manufacturer = "Bering Limited"
+	const seriesDescription = "AI derived series"
+	const manufacturerModelName = "BraveCX"
+	const softwareVersions = "1.0.0"
+
+	modalityEle, err := dicom.NewElement(tag.Modality, []string{XRModality})
+	if err != nil {
+		return nil, err
+	}
+	manufacturerEle, err := dicom.NewElement(tag.Manufacturer, []string{manufacturer})
+	if err != nil {
+		return nil, err
+	}
+	seriesDescriptionEle, err := dicom.NewElement(tag.SeriesDescription, []string{seriesDescription})
+	if err != nil {
+		return nil, err
+	}
+	manufacturerModelNameEle, err := dicom.NewElement(tag.ManufacturerModelName, []string{manufacturerModelName})
+	if err != nil {
+		return nil, err
+	}
+	softwareVersionsEle, err := dicom.NewElement(tag.SoftwareVersions, []string{softwareVersions})
+	if err != nil {
+		return nil, err
+	}
+
+	generatedElements := []*dicom.Element{
+		seriesInstanceUIDEle,
+		seriesNumberEle,
+		instanceNumberEle,
+		contentDateEle,
+		contentTimeEle,
+		modalityEle,
+		manufacturerEle,
+		seriesDescriptionEle,
+		manufacturerModelNameEle,
+		softwareVersionsEle,
+	}
+
+	return generatedElements, nil
 }
 
 // derivedMetadata extracts elements from the provided dataset that are required for linking
