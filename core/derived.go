@@ -92,51 +92,10 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	// // ----  Pulled from original DICOM ------
 	// // ---------------------------------------
 
-	// // TODO: handle missing tags
-
-	// Study fields
-	studyInstanceUIDEle, err := ds.FindElementByTag(tag.StudyInstanceUID)
+	derivedElements, err := derivedMetadata(ds)
 	if err != nil {
 		return err
 	}
-	studyInstanceIDEle, err := ds.FindElementByTag(tag.StudyID)
-	if err != nil {
-		return err
-	}
-	studyDateEle, err := ds.FindElementByTag(tag.StudyDate)
-	if err != nil {
-		return err
-	}
-	studyTimeEle, err := ds.FindElementByTag(tag.StudyTime)
-	if err != nil {
-		return err
-	}
-
-	// Patient fields
-	accessionNumberEle, err := ds.FindElementByTag(tag.AccessionNumber)
-	if err != nil {
-		return err
-	}
-	patientNameEle, err := ds.FindElementByTag(tag.PatientName)
-	if err != nil {
-		return err
-	}
-	patientIDEle, err := ds.FindElementByTag(tag.PatientID)
-	if err != nil {
-		return err
-	}
-	patientBirthDateEle, err := ds.FindElementByTag(tag.PatientBirthDate)
-	if err != nil {
-		return err
-	}
-	patientSexEle, err := ds.FindElementByTag(tag.PatientSex)
-	if err != nil {
-		return err
-	}
-	// patientAgeEle, err := ds.FindElementByTag(tag.PatientAge)
-	// if err != nil {
-	// 	return err
-	// }
 
 	// ---------------------------------------
 	// ----       Generated fields      ------
@@ -211,16 +170,6 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 			// implementationVersionNameEle,
 			sopInstanceUIDEle,
 			sopClassUIDEle,
-			studyInstanceUIDEle,
-			studyInstanceIDEle,
-			studyDateEle,
-			studyTimeEle,
-			accessionNumberEle,
-			patientNameEle,
-			patientIDEle,
-			patientBirthDateEle,
-			patientSexEle,
-			// patientAgeEle,
 			seriesInstanceUIDEle,
 			seriesNumberEle,
 			instanceNumberEle,
@@ -245,6 +194,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		return err
 	}
 
+	derivedImage.Elements = append(derivedImage.Elements, derivedElements...)
 	derivedImage.Elements = append(derivedImage.Elements, imageElements...)
 
 	bufOut := bufio.NewWriter(outFile)
@@ -264,6 +214,71 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	}
 
 	return nil
+}
+
+// derivedMetadata extracts elements from the provided dataset that are required for linking
+// any derived DICOM back to the original image. Study ID, patient number and linked information
+// will be returned as a slice.
+func derivedMetadata(ds dicom.Dataset) ([]*dicom.Element, error) {
+	// // TODO: handle missing tags
+
+	// Study fields
+	studyInstanceUIDEle, err := ds.FindElementByTag(tag.StudyInstanceUID)
+	if err != nil {
+		return nil, err
+	}
+	studyInstanceIDEle, err := ds.FindElementByTag(tag.StudyID)
+	if err != nil {
+		return nil, err
+	}
+	studyDateEle, err := ds.FindElementByTag(tag.StudyDate)
+	if err != nil {
+		return nil, err
+	}
+	studyTimeEle, err := ds.FindElementByTag(tag.StudyTime)
+	if err != nil {
+		return nil, err
+	}
+
+	// Patient fields
+	accessionNumberEle, err := ds.FindElementByTag(tag.AccessionNumber)
+	if err != nil {
+		return nil, err
+	}
+	patientNameEle, err := ds.FindElementByTag(tag.PatientName)
+	if err != nil {
+		return nil, err
+	}
+	patientIDEle, err := ds.FindElementByTag(tag.PatientID)
+	if err != nil {
+		return nil, err
+	}
+	patientBirthDateEle, err := ds.FindElementByTag(tag.PatientBirthDate)
+	if err != nil {
+		return nil, err
+	}
+	patientSexEle, err := ds.FindElementByTag(tag.PatientSex)
+	if err != nil {
+		return nil, err
+	}
+	// patientAgeEle, err := ds.FindElementByTag(tag.PatientAge)
+	// if err != nil {
+	// 	return err
+	// }
+
+	derivedElements := []*dicom.Element{
+		studyInstanceUIDEle,
+		studyInstanceIDEle,
+		studyDateEle,
+		studyTimeEle,
+		accessionNumberEle,
+		patientNameEle,
+		patientIDEle,
+		patientBirthDateEle,
+		patientSexEle,
+	}
+
+	return derivedElements, nil
 }
 
 // imageToDicomElements decodes an Image from Reader r and returns
