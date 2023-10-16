@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"image"
+	"io"
 	"os"
 	"time"
 
@@ -238,11 +239,42 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return err
 	}
-	bufRead := bufio.NewReader(imgFile)
+
+	imageElements, err := imageToDicomElements(imgFile)
+	if err != nil {
+		return err
+	}
+
+	derivedImage.Elements = append(derivedImage.Elements, imageElements...)
+
+	bufOut := bufio.NewWriter(outFile)
+
+	err = dicom.Write(bufOut, derivedImage)
+	if err != nil {
+		return err
+	}
+
+	err = bufOut.Flush()
+	if err != nil {
+		return err
+	}
+
+	if err := outFile.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// imageToDicomElements decodes an Image from Reader r and returns
+// a set of DICOM elements containing the pixel data and related metadata.
+// The image PixelData will be encoded in RGB 8-bit format.
+func imageToDicomElements(r io.Reader) ([]*dicom.Element, error) {
+	bufRead := bufio.NewReader(r)
 
 	img, _, err := image.Decode(bufRead)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	b := img.Bounds()
@@ -284,57 +316,55 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 
 	pixelDataEle, err := dicom.NewElement(tag.PixelData, pixelDataInfo)
 	if err != nil {
-		return fmt.Errorf("failed to add pixeldata element: %s", err)
+		return nil, fmt.Errorf("failed to add pixeldata element: %s", err)
 	}
 
 	samplesPerPixelEle, err := dicom.NewElement(tag.SamplesPerPixel, []int{3})
 	if err != nil {
-		return fmt.Errorf("failed to add samplesPerPixel element: %s", err)
+		return nil, fmt.Errorf("failed to add samplesPerPixel element: %s", err)
 	}
 	planarConfigEle, err := dicom.NewElement(tag.PlanarConfiguration, []int{0})
 	if err != nil {
-		return fmt.Errorf("failed to add planar config element: %s", err)
+		return nil, fmt.Errorf("failed to add planar config element: %s", err)
 	}
 	rowsEle, err := dicom.NewElement(tag.Rows, []int{rows})
 	if err != nil {
-		return fmt.Errorf("failed to add rows element: %s", err)
+		return nil, fmt.Errorf("failed to add rows element: %s", err)
 	}
 	colsEle, err := dicom.NewElement(tag.Columns, []int{cols})
 	if err != nil {
-		return fmt.Errorf("failed to add columns element: %s", err)
+		return nil, fmt.Errorf("failed to add columns element: %s", err)
 	}
 	bitsAllocEle, err := dicom.NewElement(tag.BitsAllocated, []int{bitsAllocated})
 	if err != nil {
-		return fmt.Errorf("failed to add bits allocated element: %s", err)
+		return nil, fmt.Errorf("failed to add bits allocated element: %s", err)
 	}
 	bitsStoredEle, err := dicom.NewElement(tag.BitsStored, []int{bitsStored})
 	if err != nil {
-		return fmt.Errorf("failed to add bits stored element: %s", err)
+		return nil, fmt.Errorf("failed to add bits stored element: %s", err)
 	}
 	highBitEle, err := dicom.NewElement(tag.HighBit, []int{highBit})
 	if err != nil {
-		return fmt.Errorf("failed to add high bit element: %s", err)
+		return nil, fmt.Errorf("failed to add high bit element: %s", err)
 	}
 	pixelRepEle, err := dicom.NewElement(tag.PixelRepresentation, []int{0})
 	if err != nil {
-		return fmt.Errorf("failed to add pixel rep element: %s", err)
+		return nil, fmt.Errorf("failed to add pixel rep element: %s", err)
 	}
 	numFramesEle, err := dicom.NewElement(tag.NumberOfFrames, []string{"1"})
 	if err != nil {
-		return fmt.Errorf("failed to add numFrames element: %s", err)
+		return nil, fmt.Errorf("failed to add numFrames element: %s", err)
 	}
 	photometricEle, err := dicom.NewElement(tag.PhotometricInterpretation, []string{"RGB"})
 	if err != nil {
-		return fmt.Errorf("failed to add photometric interpretation element: %s", err)
+		return nil, fmt.Errorf("failed to add photometric interpretation element: %s", err)
 	}
 	imageTypeEle, err := dicom.NewElement(tag.ImageType, []string{"DERIVED", "SECONDARY"})
 	if err != nil {
-		return fmt.Errorf("failed to add image type element: %s", err)
+		return nil, fmt.Errorf("failed to add image type element: %s", err)
 	}
 
-	var imageElements []*dicom.Element
-	imageElements = append(
-		imageElements,
+	imageElements := []*dicom.Element{
 		imageTypeEle,
 		pixelRepEle,
 		samplesPerPixelEle,
@@ -347,25 +377,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		numFramesEle,
 		photometricEle,
 		pixelDataEle,
-	)
-
-	derivedImage.Elements = append(derivedImage.Elements, imageElements...)
-
-	bufOut := bufio.NewWriter(outFile)
-
-	err = dicom.Write(bufOut, derivedImage)
-	if err != nil {
-		return err
 	}
 
-	err = bufOut.Flush()
-	if err != nil {
-		return err
-	}
-
-	if err := outFile.Close(); err != nil {
-		return err
-	}
-
-	return nil
+	return imageElements, nil
 }
