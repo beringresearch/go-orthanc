@@ -173,8 +173,8 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return err
 	}
-	// TODO - way to find this out?
-	seriesNumberEle, err := dicom.NewElement(tag.SeriesNumber, []string{"99"})
+	// Assume the new generated generated DICOM is the first and only in its sequence (since seriesIntaceUID is newly generated)
+	seriesNumberEle, err := dicom.NewElement(tag.SeriesNumber, []string{"1"})
 	if err != nil {
 		return err
 	}
