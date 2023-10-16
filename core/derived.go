@@ -27,6 +27,13 @@ const (
 	enhancedSRIOD sopClassUID = "1.2.840.10008.5.1.4.1.1.88.22"
 )
 
+type modality string
+
+const (
+	xrModality modality = "DX"
+	srModality modality = "SR"
+)
+
 func CreateDerivedImage(dicomPath string, imagePath string, outPath string) error {
 	f, err := os.Open(dicomPath)
 	if err != nil {
@@ -58,7 +65,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	if err != nil {
 		return err
 	}
-	generatedElements, err := generateInstanceMetadata()
+	generatedElements, err := generateInstanceMetadata(xrModality)
 	if err != nil {
 		return err
 	}
@@ -164,7 +171,7 @@ func derivedHeaderElements(sopClassUID sopClassUID) ([]*dicom.Element, error) {
 // generateInstanceMetadata generates new DICOM elements for a new instance. It creates unique IDs
 // and uses the current timestamp to mark content date and time.
 // Constant elements relating to product information are also embedded here (manufacturer etc.)
-func generateInstanceMetadata() ([]*dicom.Element, error) {
+func generateInstanceMetadata(modality modality) ([]*dicom.Element, error) {
 	seriesInstanceUID, err := generateUUID()
 	if err != nil {
 		return nil, err
@@ -198,13 +205,12 @@ func generateInstanceMetadata() ([]*dicom.Element, error) {
 	}
 
 	// Constant fields
-	const XRModality = "DX"
 	const manufacturer = "Bering Limited"
 	const seriesDescription = "AI derived series"
 	const manufacturerModelName = "BraveCX"
 	const softwareVersions = "1.0.0"
 
-	modalityEle, err := dicom.NewElement(tag.Modality, []string{XRModality})
+	modalityEle, err := dicom.NewElement(tag.Modality, []string{string(modality)})
 	if err != nil {
 		return nil, err
 	}
