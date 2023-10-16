@@ -233,7 +233,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		},
 	}
 
-	// To test including an image
+	// Add image to derived DICOM
 	imgFile, err := os.Open(imagePath)
 	if err != nil {
 		return err
@@ -261,9 +261,6 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		},
 		IsEncapsulated: false,
 	}
-	for i := 0; i < rows*cols; i++ {
-		pixelDataInfo.Frames[0].NativeData.Data[i] = make([]int, 3)
-	}
 
 	// Fill pixel values
 	for i := 0; i < rows*cols; i++ {
@@ -274,9 +271,11 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 		r_8bit := r >> 8
 		g_8bit := g >> 8
 		b_8bit := b >> 8
-		pixelDataInfo.Frames[0].NativeData.Data[i][0] = int(r_8bit)
-		pixelDataInfo.Frames[0].NativeData.Data[i][1] = int(g_8bit)
-		pixelDataInfo.Frames[0].NativeData.Data[i][2] = int(b_8bit)
+		pixelDataInfo.Frames[0].NativeData.Data[i] = []int{
+			int(r_8bit),
+			int(g_8bit),
+			int(b_8bit),
+		}
 	}
 
 	pixelDataEle, err := dicom.NewElement(tag.PixelData, pixelDataInfo)
