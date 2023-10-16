@@ -18,6 +18,13 @@ import (
 	"github.com/suyashkumar/dicom/pkg/uid"
 )
 
+type sopClassUID string
+
+const (
+	digitalXrIOD  sopClassUID = "1.2.840.10008.5.1.4.1.1.1.1"
+	enhancedSRIOD sopClassUID = "1.2.840.10008.5.1.4.1.1.88.22"
+)
+
 func CreateDerivedImage(dicomPath string, imagePath string, outPath string) error {
 	f, err := os.Open(dicomPath)
 	if err != nil {
@@ -41,7 +48,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 	defer imgFile.Close()
 
 	// Gather DICOM elements
-	headerElements, err := derivedHeaderElements()
+	headerElements, err := derivedHeaderElements(digitalXrIOD)
 	if err != nil {
 		return err
 	}
@@ -96,8 +103,7 @@ func CreateDerivedImage(dicomPath string, imagePath string, outPath string) erro
 // derivedHeaderElements creates the header elements for a derived DICOM file.
 // It sets up the header to assist parsing of the DICOM, including elements
 // marking the byte order and how the DICOM is to be interpreted.
-func derivedHeaderElements() ([]*dicom.Element, error) {
-	const digitalXrIOD = "1.2.840.10008.5.1.4.1.1.1.1"
+func derivedHeaderElements(sopClassUID sopClassUID) ([]*dicom.Element, error) {
 
 	SOPInstanceUID, err := generateUUID()
 	if err != nil {
@@ -108,7 +114,7 @@ func derivedHeaderElements() ([]*dicom.Element, error) {
 	if err != nil {
 		return nil, err
 	}
-	metadataSOPClassUIDEle, err := dicom.NewElement(tag.MediaStorageSOPClassUID, []string{digitalXrIOD})
+	metadataSOPClassUIDEle, err := dicom.NewElement(tag.MediaStorageSOPClassUID, []string{string(sopClassUID)})
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +140,7 @@ func derivedHeaderElements() ([]*dicom.Element, error) {
 	if err != nil {
 		return nil, err
 	}
-	sopClassUIDEle, err := dicom.NewElement(tag.SOPClassUID, []string{digitalXrIOD})
+	sopClassUIDEle, err := dicom.NewElement(tag.SOPClassUID, []string{string(digitalXrIOD)})
 	if err != nil {
 		return nil, err
 	}
