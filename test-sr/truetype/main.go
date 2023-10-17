@@ -17,14 +17,19 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-type urgencyColors image.Image
+type urgencyColor image.Image
 
-var (
-	low        urgencyColors = image.NewUniform(color.RGBA{52, 235, 64, 255})
-	mediumLow  urgencyColors = image.NewUniform(color.RGBA{241, 236, 0, 255})
-	mediumHigh urgencyColors = image.NewUniform(color.RGBA{235, 88, 52, 255})
-	high       urgencyColors = image.NewUniform(color.RGBA{235, 0, 0, 255})
-)
+var urgencyColors = struct {
+	low        urgencyColor
+	mediumLow  urgencyColor
+	mediumHigh urgencyColor
+	high       urgencyColor
+}{
+	low:        image.NewUniform(color.RGBA{52, 235, 64, 255}),
+	mediumLow:  image.NewUniform(color.RGBA{241, 236, 0, 255}),
+	mediumHigh: image.NewUniform(color.RGBA{235, 88, 52, 255}),
+	high:       image.NewUniform(color.RGBA{235, 0, 0, 255}),
+}
 
 type Editable interface {
 	image.Image
@@ -91,7 +96,7 @@ func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle
 	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
 	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
 
-	drawer.Src = mediumLow
+	drawer.Src = urgencyColors.low
 	drawer.DrawString(text)
 }
 
