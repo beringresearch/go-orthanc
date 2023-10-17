@@ -17,6 +17,11 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+type Editable interface {
+	image.Image
+	Set(x int, y int, c color.Color)
+}
+
 func main() {
 	const (
 		width  = 144 * 20
@@ -28,25 +33,38 @@ func main() {
 		log.Fatalf("Parse: %v", err)
 	}
 
-	dst := image.NewGray(image.Rect(0, 0, width, height))
-	scaleFontFaceSize(f, "jelly", dst)
-	// scaleFontFaceSizeAnalytical(f, "jelly", dst)
+	imageFile, err := os.Open("out.png")
+	if err != nil {
+		log.Fatal("can't open image")
+	}
 
-	drawTextboxBackground(dst, dst.Bounds().Sub(image.Point{width / 2, height / 2}))
+	img, err := png.Decode(imageFile)
+	if err != nil {
+		log.Fatal("can't decode img")
+	}
+
+	dst, ok := img.(Editable)
+	if !ok {
+		log.Fatal("not editable img")
+	}
+
+	// dst := image.NewGray(image.Rect(0, 0, width, height))
+
+	drawTextBox(f, "jelly", dst, dst.Bounds().Sub(image.Point{30, 25}))
 
 	out, err := os.Create("out.png")
 	if err != nil {
-		return
+		log.Fatal("can't open output image")
 	}
 
 	err = png.Encode(out, dst)
 	if err != nil {
-		return
+		log.Fatal("can't encode png")
 	}
 
 	err = out.Close()
 	if err != nil {
-		return
+		log.Fatal("error closing output")
 	}
 }
 
@@ -64,6 +82,7 @@ func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
 
 func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) {
 	imgBounds := rect.Bounds()
+	drawTextboxBackground(dst, imgBounds)
 
 	startingDotX := imgBounds.Min.X
 	startingDotY := imgBounds.Max.Y
