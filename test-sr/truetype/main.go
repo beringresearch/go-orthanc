@@ -75,7 +75,7 @@ func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
 	drawTextboxBackground(dst, textBoxBounds)
-	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst)
+	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
 	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
 	drawer.DrawString(text)
 }
@@ -104,8 +104,8 @@ func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
 	}
 }
 
-func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image) (face font.Face, drawer font.Drawer, bounds fixed.Rectangle26_6) {
-	imgBounds := dst.Bounds()
+func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) (face font.Face, drawer font.Drawer, bounds fixed.Rectangle26_6) {
+	imgBounds := rect.Bounds()
 
 	startingDotX := imgBounds.Min.X
 	startingDotY := imgBounds.Max.Y
