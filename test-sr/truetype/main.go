@@ -68,7 +68,7 @@ func main() {
 
 	// dst := image.NewGray(image.Rect(0, 0, width, height))
 
-	drawTextBox(f, "jelly 123456789", dst, image.Rect(0, 0, width, height))
+	drawTextBox(f, "jelly 123456789", dst, image.Rect(0, 0, dst.Rect.Max.X/2, dst.Rect.Max.Y/4))
 
 	out, err := os.Create("out.png")
 	if err != nil {
@@ -92,11 +92,11 @@ func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle
 	textBoxBounds := rect.Bounds().Intersect(dst.Bounds())
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
-	drawTextboxBackground(dst, textBoxBounds)
 	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
 	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
 
 	drawer.Src = urgencyColors.low
+	drawTextboxBackground(dst, textBoxBounds)
 	drawer.DrawString(text)
 }
 
