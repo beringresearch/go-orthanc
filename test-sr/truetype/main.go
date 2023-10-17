@@ -68,6 +68,27 @@ func main() {
 	}
 }
 
+func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) {
+	imgBounds := rect.Bounds()
+
+	drawTextboxBackground(dst, imgBounds)
+	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst)
+	centerTextboxDrawer(&drawer, imgBounds, drawnBounds)
+	drawer.DrawString(text)
+}
+
+func centerTextboxDrawer(d *font.Drawer, imgBounds image.Rectangle, drawnBounds fixed.Rectangle26_6) {
+	topPad := drawnBounds.Min.Y.Round() - imgBounds.Min.Y
+	bottomPad := drawnBounds.Max.Y.Round() - imgBounds.Max.Y
+	leftPad := drawnBounds.Min.X.Round() - imgBounds.Min.X
+	rightPad := drawnBounds.Max.X.Round() - imgBounds.Max.X
+
+	d.Dot = fixed.P(
+		d.Dot.X.Round()+int(math.Abs(float64(leftPad)+float64(rightPad))/2),
+		d.Dot.Y.Round()-int(math.Abs(float64(topPad)+float64(bottomPad))/2),
+	)
+}
+
 func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
 	// Apply a gray rectangle background for text
 	bounds := rect.Bounds()
@@ -80,85 +101,7 @@ func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
 	}
 }
 
-func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) {
-	imgBounds := rect.Bounds()
-	drawTextboxBackground(dst, imgBounds)
-
-	startingDotX := imgBounds.Min.X
-	startingDotY := imgBounds.Max.Y
-
-	fontsize := 1.
-	face, err := opentype.NewFace(f, &opentype.FaceOptions{
-		Size:    fontsize,
-		DPI:     72,
-		Hinting: font.HintingNone,
-	})
-	if err != nil {
-		log.Fatalf("NewFace: %v", err)
-	}
-
-	d := font.Drawer{
-		Dst:  dst,
-		Src:  image.White,
-		Face: face,
-		Dot:  fixed.P(startingDotX, startingDotY),
-	}
-	bounds, _ := d.BoundString(text)
-	fmt.Printf("Measured bounds: %+v\n", bounds)
-
-	for math.Abs(float64(bounds.Max.X.Ceil())-float64(bounds.Min.X.Floor())) < float64(imgBounds.Dx())*0.9 &&
-		math.Abs(float64(bounds.Max.Y.Ceil())-float64(bounds.Min.Y.Floor())) < float64(imgBounds.Dy())*0.9 {
-
-		fontsize = fontsize + 1
-
-		face, err = opentype.NewFace(f, &opentype.FaceOptions{
-			Size:    fontsize,
-			DPI:     72,
-			Hinting: font.HintingNone,
-		})
-		if err != nil {
-			log.Fatalf("NewFace: %v", err)
-		}
-
-		d = font.Drawer{
-			Dst:  dst,
-			Src:  image.White,
-			Face: face,
-			Dot:  fixed.P(startingDotX, startingDotY),
-		}
-		bounds, _ = d.BoundString(text)
-	}
-
-	fmt.Printf("fontsize: %f\n", fontsize)
-
-	// Centre text
-
-	fmt.Printf("drawer: %+v\n", bounds)
-	fmt.Printf("img: %+v\n", imgBounds)
-
-	fmt.Printf("The dot is at %v\n", d.Dot)
-
-	topPad := bounds.Min.Y.Round() - imgBounds.Min.Y
-	bottomPad := bounds.Max.Y.Round() - imgBounds.Max.Y
-	leftPad := bounds.Min.X.Round() - imgBounds.Min.X
-	rightPad := bounds.Max.X.Round() - imgBounds.Max.X
-
-	fmt.Printf("topPad: %d\n", topPad)
-	fmt.Printf("bottomPad: %d\n", bottomPad)
-	fmt.Printf("leftPad: %d\n", leftPad)
-	fmt.Printf("rightPad: %d\n", rightPad)
-
-	d.Dot = fixed.P(
-		d.Dot.X.Round()+int(math.Abs(float64(leftPad)+float64(rightPad))/2),
-		d.Dot.Y.Round()-int(math.Abs(float64(topPad)+float64(bottomPad))/2),
-	)
-
-	fmt.Printf("The dot is at %v\n", d.Dot)
-	d.DrawString(text)
-	fmt.Printf("The dot is at %v\n", d.Dot)
-}
-
-func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image) {
+func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image) (face font.Face, drawer font.Drawer, bounds fixed.Rectangle26_6) {
 	imgBounds := dst.Bounds()
 
 	startingDotX := imgBounds.Min.X
@@ -174,13 +117,13 @@ func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image) {
 		log.Fatalf("NewFace: %v", err)
 	}
 
-	d := font.Drawer{
+	drawer = font.Drawer{
 		Dst:  dst,
 		Src:  image.White,
 		Face: face,
 		Dot:  fixed.P(startingDotX, startingDotY),
 	}
-	bounds, _ := d.BoundString(text)
+	bounds, _ = drawer.BoundString(text)
 	fmt.Printf("Measured bounds: %+v\n", bounds)
 
 	for math.Abs(float64(bounds.Max.X.Ceil())-float64(bounds.Min.X.Floor())) < float64(imgBounds.Dx())*0.9 &&
@@ -197,43 +140,18 @@ func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image) {
 			log.Fatalf("NewFace: %v", err)
 		}
 
-		d = font.Drawer{
+		drawer = font.Drawer{
 			Dst:  dst,
 			Src:  image.White,
 			Face: face,
 			Dot:  fixed.P(startingDotX, startingDotY),
 		}
-		bounds, _ = d.BoundString(text)
+		bounds, _ = drawer.BoundString(text)
 	}
 
 	fmt.Printf("fontsize: %f\n", fontsize)
 
-	// Centre text
-
-	fmt.Printf("drawer: %+v\n", bounds)
-	fmt.Printf("img: %+v\n", imgBounds)
-
-	fmt.Printf("The dot is at %v\n", d.Dot)
-
-	topPad := bounds.Min.Y.Round() - imgBounds.Min.Y
-	bottomPad := bounds.Max.Y.Round() - imgBounds.Max.Y
-	leftPad := bounds.Min.X.Round() - imgBounds.Min.X
-	rightPad := bounds.Max.X.Round() - imgBounds.Max.X
-
-	fmt.Printf("topPad: %d\n", topPad)
-	fmt.Printf("bottomPad: %d\n", bottomPad)
-	fmt.Printf("leftPad: %d\n", leftPad)
-	fmt.Printf("rightPad: %d\n", rightPad)
-
-	d.Dot = fixed.P(
-		d.Dot.X.Round()+int(math.Abs(float64(leftPad)+float64(rightPad))/2),
-		d.Dot.Y.Round()-int(math.Abs(float64(topPad)+float64(bottomPad))/2),
-	)
-
-	fmt.Printf("The dot is at %v\n", d.Dot)
-	d.DrawString(text)
-	fmt.Printf("The dot is at %v\n", d.Dot)
-
+	return face, drawer, bounds
 }
 
 func scaleFontFaceSizeAnalytical(f *sfnt.Font, text string, dst draw.Image) {
