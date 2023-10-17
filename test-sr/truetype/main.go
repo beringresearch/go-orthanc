@@ -17,6 +17,15 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
+type urgencyColors image.Image
+
+var (
+	low        urgencyColors = image.NewUniform(color.RGBA{52, 235, 64, 255})
+	mediumLow  urgencyColors = image.NewUniform(color.RGBA{241, 236, 0, 255})
+	mediumHigh urgencyColors = image.NewUniform(color.RGBA{235, 88, 52, 255})
+	high       urgencyColors = image.NewUniform(color.RGBA{235, 0, 0, 255})
+)
+
 type Editable interface {
 	image.Image
 	Set(x int, y int, c color.Color)
@@ -33,7 +42,8 @@ func main() {
 		log.Fatalf("Parse: %v", err)
 	}
 
-	imageFile, err := os.Open("out.png")
+	// imageFile, err := os.Open("out.png")
+	imageFile, err := os.Open("../../demo-heatmaps-updated/bad1_sr.png")
 	if err != nil {
 		log.Fatal("can't open image")
 	}
@@ -43,14 +53,17 @@ func main() {
 		log.Fatal("can't decode img")
 	}
 
-	dst, ok := img.(Editable)
-	if !ok {
-		log.Fatal("not editable img")
-	}
+	// dst, ok := img.(Editable)
+	// if !ok {
+	// log.Fatal("not editable img")
+	// }
+
+	dst := image.NewRGBA(img.Bounds())
+	draw.Draw(dst, dst.Bounds(), img, image.Point{}, draw.Src)
 
 	// dst := image.NewGray(image.Rect(0, 0, width, height))
 
-	drawTextBox(f, "jelly", dst, image.Rect(0, 0, width/2, height/2))
+	drawTextBox(f, "jelly 123456789", dst, image.Rect(0, 0, width, height))
 
 	out, err := os.Create("out.png")
 	if err != nil {
@@ -77,6 +90,8 @@ func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle
 	drawTextboxBackground(dst, textBoxBounds)
 	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
 	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
+
+	drawer.Src = mediumLow
 	drawer.DrawString(text)
 }
 
@@ -93,15 +108,8 @@ func centerTextboxDrawer(d *font.Drawer, imgBounds image.Rectangle, drawnBounds 
 }
 
 func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
-	// Apply a gray rectangle background for text
-	bounds := rect.Bounds()
-	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
-		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			pixel := dst.At(x, y)
-			r, g, b, _ := pixel.RGBA()
-			dst.Set(x, y, color.NRGBA{uint8(r >> 9), uint8(g >> 9), uint8(b >> 9), uint8(200)})
-		}
-	}
+	mask := image.NewUniform(color.Alpha{200})
+	draw.DrawMask(dst, rect, image.Black, image.Point{}, mask, image.Point{}, draw.Over)
 }
 
 func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) (face font.Face, drawer font.Drawer, bounds fixed.Rectangle26_6) {
