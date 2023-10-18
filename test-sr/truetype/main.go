@@ -17,24 +17,19 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-type urgencyColor image.Image
+type UrgencyColor color.Color
 
-var urgencyColors = struct {
-	low        urgencyColor
-	mediumLow  urgencyColor
-	mediumHigh urgencyColor
-	high       urgencyColor
-}{
-	low:        image.NewUniform(color.RGBA{52, 235, 64, 255}),
-	mediumLow:  image.NewUniform(color.RGBA{241, 236, 0, 255}),
-	mediumHigh: image.NewUniform(color.RGBA{235, 88, 52, 255}),
-	high:       image.NewUniform(color.RGBA{235, 0, 0, 255}),
-}
+var (
+	LowUrgencyColor        UrgencyColor = color.RGBA{52, 235, 64, 255}
+	MediumLowUrgencyColor               = color.RGBA{241, 236, 0, 255}
+	MediumHighUrgencyColor              = color.RGBA{235, 88, 52, 255}
+	HighUrgencyColor                    = color.RGBA{235, 0, 0, 255}
+)
 
 type textboxPosition int
 
 const (
-	topLeft = iota
+	topLeft textboxPosition = iota
 	topRight
 	bottomLeft
 	bottomRight
@@ -93,6 +88,7 @@ func main() {
 		lines,
 		dst,
 		textBox,
+		MediumHighUrgencyColor,
 	)
 
 	out, err := os.Create("out.png")
@@ -111,7 +107,7 @@ func main() {
 	}
 }
 
-func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectangle) {
+func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectangle, color color.Color) {
 	fmt.Printf("input rect: %+v\n", rect)
 	fmt.Printf("image bounds: %+v\n", dst.Bounds())
 	textBoxBounds := rect.Bounds().Intersect(dst.Bounds())
@@ -186,7 +182,7 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 
 	// Draw each line on top
 	for i := range lineDrawers {
-		lineDrawers[i].Src = urgencyColors.mediumHigh
+		lineDrawers[i].Src = image.NewUniform(color)
 		lineDrawers[i].DrawString(lines[i])
 	}
 }
