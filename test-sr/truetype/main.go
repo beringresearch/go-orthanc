@@ -90,7 +90,7 @@ func main() {
 
 	textBox := measureTextbox(dst.Bounds(), lines)
 
-	drawTextBox(f,
+	DrawTextBox(f,
 		lines,
 		dst,
 		textBox,
@@ -113,7 +113,7 @@ func main() {
 	}
 }
 
-func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, box image.Rectangle, color color.Color) {
+func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, box image.Rectangle, color color.Color) {
 	fmt.Printf("input rect: %+v\n", box)
 	fmt.Printf("image bounds: %+v\n", dst.Bounds())
 	textBoxBounds := box.Bounds().Intersect(dst.Bounds())
