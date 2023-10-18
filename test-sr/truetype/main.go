@@ -48,7 +48,7 @@ func main() {
 	}
 
 	// imageFile, err := os.Open("out.png")
-	imageFile, err := os.Open("../../demo-heatmaps-updated/bad1_sr.png")
+	imageFile, err := os.Open("../../demo-heatmaps-updated/bronchus1_sr.png")
 	if err != nil {
 		log.Fatal("can't open image")
 	}
@@ -74,9 +74,17 @@ func main() {
 	// 	dst.Rect.Max.X/3,
 	// 	dst.Rect.Max.Y/4), 0.8)
 
-	textBox := image.Rect(0, 0, dst.Rect.Max.X/3, dst.Rect.Max.Y/4)
+	textBox := image.Rect(0, 0, dst.Rect.Max.X/2, dst.Rect.Max.Y/15)
 
-	drawTextBox(f, "NGT Malposition risk: HIGH (41.0%)", dst, textBox)
+	drawTextBox(f,
+		[]string{
+			"NGT Malposition risk: HIGH (41.0%)",
+			"Risk of Bronchial NGT: LOW (5.0%)",
+			"Risk of Rain: 20%",
+		},
+		dst,
+		textBox,
+	)
 
 	out, err := os.Create("out.png")
 	if err != nil {
@@ -94,26 +102,91 @@ func main() {
 	}
 }
 
-func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) {
+func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectangle) {
 	fmt.Printf("input rect: %+v\n", rect)
 	fmt.Printf("image bounds: %+v\n", dst.Bounds())
 	textBoxBounds := rect.Bounds().Intersect(dst.Bounds())
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
+	textLineBounds := splitRectangleLines(rect, len(lines))
+	fmt.Printf("split lines bounds: %+v\n", textLineBounds)
+
+	var lineDrawers []font.Drawer
+	var drawnBounds []image.Rectangle
+	for i := range lines {
+		lineDrawer, lineBounds := alignTextLinesDrawers(f, lines[i], dst, textLineBounds[i])
+
+		lineDrawers = append(lineDrawers, lineDrawer)
+		drawnBounds = append(drawnBounds, lineBounds)
+	}
+
+	textBoxBounds = unionRects(drawnBounds)
+	fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
+	textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
+	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
+
+	drawTextboxBackground(dst, textBoxBounds)
+
+	for i := range lineDrawers {
+		lineDrawers[i].Src = urgencyColors.mediumHigh
+		lineDrawers[i].DrawString(lines[i])
+	}
+
+	// _, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
+
+	// centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
+
+	// // Update drawer bounds now that centred
+	// drawnBounds, _ = drawer.BoundString(text)
+	// textBoxBounds = fixedRectToRect(drawnBounds)
+	// fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
+	// textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
+	// fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
+
+	// drawer.Src = urgencyColors.mediumHigh
+	// drawTextboxBackground(dst, textBoxBounds)
+	// drawer.DrawString(text)
+}
+
+func unionRects(rects []image.Rectangle) image.Rectangle {
+	union := rects[0]
+
+	for i := 1; i < len(rects); i++ {
+		union = union.Union(rects[i])
+	}
+
+	return union
+}
+
+func alignTextLinesDrawers(f *sfnt.Font, text string, dst draw.Image, textBoxBounds image.Rectangle) (font.Drawer, image.Rectangle) {
 	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
 
 	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
 
 	// Update drawer bounds now that centred
 	drawnBounds, _ = drawer.BoundString(text)
-	textBoxBounds = fixedRectToRect(drawnBounds)
-	fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
-	textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
-	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
 
-	drawer.Src = urgencyColors.mediumHigh
-	drawTextboxBackground(dst, textBoxBounds)
-	drawer.DrawString(text)
+	return drawer, fixedRectToRect(drawnBounds)
+}
+
+func splitRectangleLines(rect image.Rectangle, n int) []image.Rectangle {
+	// If not exact, just leave a gap - we will center later
+	newHeight := rect.Dy() / n
+
+	var lineBounds []image.Rectangle
+
+	for i := rect.Min.Y; i <= rect.Max.Y-newHeight; i += newHeight {
+		lineBounds = append(lineBounds,
+			image.Rect(
+				rect.Min.X,
+				i,
+				rect.Max.X,
+				i+newHeight,
+			),
+		)
+	}
+
+	return lineBounds
 }
 
 func fixedRectToRect(fixedRect fixed.Rectangle26_6) image.Rectangle {
