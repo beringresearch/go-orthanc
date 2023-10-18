@@ -27,8 +27,8 @@ var (
 )
 
 const (
-	imageLineHeightScaler     = 0.03
-	imageTextBoxWidthScaler   = 0.75
+	imageLineHeightScaler     = 0.035
+	imageTextBoxWidthScaler   = 0.6
 	imageTextBoxPaddingScaler = 0.95
 	imageMarginScaler         = 0.07
 )
@@ -80,7 +80,11 @@ func main() {
 		// "Risk of Bronchial NGT: LOW (5.0%)",
 		// "Risk of Bronchial NGT: LOW (5.0%)",
 		// "Risk of Bronchial NGT: LOW (5.0%)",
-
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
 		// "Risk of Bronchial NGT: LOW (5.0%)",
 	}
 
@@ -116,7 +120,7 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, box image.Rectang
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
 	// Divide the textbox space equally between lines
-	textLineBounds := splitRectangleLines(box, len(lines))
+	textLineBounds := splitRectangleLines(box, len(lines), 0.02)
 	fmt.Printf("split lines bounds: %+v\n", textLineBounds)
 
 	// Create a scaled drawer for each line of text
@@ -254,12 +258,17 @@ func unionRects(rects []image.Rectangle) image.Rectangle {
 	return union
 }
 
-func splitRectangleLines(rect image.Rectangle, n int) []image.Rectangle {
-	newHeight := rect.Dy() / n
+// splitRectangleLines evenly divides the rectangle into n lines.
+// Optionally, a gap proportional to the height of the rectangle
+// can be inserted between lines determined by the gapScaler multiplier.
+func splitRectangleLines(rect image.Rectangle, n int, gapScaler float64) []image.Rectangle {
+
+	paddingPixels := int(float64(rect.Dy()) * gapScaler)
+	newHeight := (rect.Dy() / n) - paddingPixels
 
 	var lineBounds []image.Rectangle
 
-	for i := rect.Min.Y; i <= rect.Max.Y-newHeight; i += newHeight {
+	for i := rect.Min.Y; i <= rect.Max.Y-newHeight; i += newHeight + paddingPixels {
 		lineBounds = append(lineBounds,
 			image.Rect(
 				rect.Min.X,
