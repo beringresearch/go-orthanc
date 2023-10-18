@@ -11,7 +11,7 @@ import (
 	"os"
 
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/gofont/gomedium"
+	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
@@ -42,7 +42,7 @@ func main() {
 		height = 72 * 15
 	)
 
-	f, err := opentype.Parse(gomedium.TTF)
+	f, err := opentype.Parse(goregular.TTF)
 	if err != nil {
 		log.Fatalf("Parse: %v", err)
 	}
@@ -68,7 +68,15 @@ func main() {
 
 	// dst := image.NewGray(image.Rect(0, 0, width, height))
 
-	drawTextBox(f, "jelly 123456789", dst, image.Rect(0, 0, dst.Rect.Max.X/2, dst.Rect.Max.Y/4))
+	// paddedBounds := scaledRect(image.Rect(
+	// 	0,
+	// 	0,
+	// 	dst.Rect.Max.X/3,
+	// 	dst.Rect.Max.Y/4), 0.8)
+
+	textBox := image.Rect(0, 0, dst.Rect.Max.X/3, dst.Rect.Max.Y/4)
+
+	drawTextBox(f, "NGT Malposition risk: HIGH (41.0%)", dst, textBox)
 
 	out, err := os.Create("out.png")
 	if err != nil {
@@ -93,11 +101,44 @@ func drawTextBox(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
 	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
+
 	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
 
-	drawer.Src = urgencyColors.low
+	// Update drawer bounds now that centred
+	drawnBounds, _ = drawer.BoundString(text)
+	textBoxBounds = fixedRectToRect(drawnBounds)
+	fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
+	textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
+	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
+
+	drawer.Src = urgencyColors.mediumHigh
 	drawTextboxBackground(dst, textBoxBounds)
 	drawer.DrawString(text)
+}
+
+func fixedRectToRect(fixedRect fixed.Rectangle26_6) image.Rectangle {
+	return image.Rect(fixedRect.Min.X.Floor(),
+		fixedRect.Min.Y.Floor(),
+		fixedRect.Max.X.Ceil(),
+		fixedRect.Max.Y.Ceil(),
+	)
+}
+
+// scaleRect scales the provided rect in place.
+// Height and width are both multipliers and are scaled separately.
+func scaleRect(rect image.Rectangle, width, height float32) image.Rectangle {
+	scaledDx := int(float32(rect.Dx()) * width)
+	scaledDy := int(float32(rect.Dy()) * height)
+
+	diffX := scaledDx - rect.Dx()
+	diffY := scaledDy - rect.Dy()
+
+	return image.Rect(
+		rect.Min.X-diffX/2,
+		rect.Min.Y-diffY/2,
+		rect.Max.X+diffX/2,
+		rect.Max.Y+diffY/2,
+	)
 }
 
 func centerTextboxDrawer(d *font.Drawer, imgBounds image.Rectangle, drawnBounds fixed.Rectangle26_6) {
@@ -113,7 +154,7 @@ func centerTextboxDrawer(d *font.Drawer, imgBounds image.Rectangle, drawnBounds 
 }
 
 func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
-	mask := image.NewUniform(color.Alpha{200})
+	mask := image.NewUniform(color.Alpha{150})
 	draw.DrawMask(dst, rect, image.Black, image.Point{}, mask, image.Point{}, draw.Over)
 }
 
