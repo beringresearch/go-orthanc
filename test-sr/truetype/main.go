@@ -75,17 +75,22 @@ func main() {
 	dst := image.NewRGBA(img.Bounds())
 	draw.Draw(dst, dst.Bounds(), img, image.Point{}, draw.Src)
 
-	textBox := image.Rect(0, 0,
-		int(float32(dst.Rect.Max.X)*0.75),
-		int(float32(dst.Rect.Max.Y)*0.1),
-	)
+	lines := []string{
+		"NGT Malposition risk: HIGH (41.0%)",
+		"Risk of Bronchial NGT: LOW (5.0%)",
+		"Risk of Rain: 20%",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+
+		// "Risk of Bronchial NGT: LOW (5.0%)",
+	}
+
+	textBox := measureTextbox(dst.Bounds(), lines)
 
 	drawTextBox(f,
-		[]string{
-			"NGT Malposition risk: HIGH (41.0%)",
-			"Risk of Bronchial NGT: LOW (5.0%)",
-			"Risk of Rain: 20%",
-		},
+		lines,
 		dst,
 		textBox,
 	)
@@ -179,6 +184,15 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 		lineDrawers[i].Src = urgencyColors.mediumHigh
 		lineDrawers[i].DrawString(lines[i])
 	}
+}
+
+func measureTextbox(box image.Rectangle, lines []string) image.Rectangle {
+	lineHeightMul := 0.03
+
+	return image.Rect(0, 0,
+		int(float32(box.Max.X)*0.75),
+		int(float32(box.Max.Y)*(float32(lineHeightMul)*float32(len(lines)))),
+	)
 }
 
 // TODO this kind of works, but after textbox is shrunk to fit text looks strange
