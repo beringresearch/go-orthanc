@@ -152,7 +152,12 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 	textBoxBounds = unionRects(drawnBounds)
 	fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
 	// Add padding
-	textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
+	paddingRect := subtractRects(
+		dst.Bounds(),
+		scaleRect(dst.Bounds(), 0.95, 0.95),
+	)
+
+	textBoxBounds = addRects(textBoxBounds, paddingRect)
 	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
 
 	// TODO: margin would need to be adjusted if allowed
@@ -184,6 +189,24 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 		lineDrawers[i].Src = urgencyColors.mediumHigh
 		lineDrawers[i].DrawString(lines[i])
 	}
+}
+
+func addRects(rect1 image.Rectangle, rect2 image.Rectangle) image.Rectangle {
+	return image.Rect(
+		rect1.Min.X+rect2.Min.X,
+		rect1.Min.Y+rect2.Min.Y,
+		rect1.Max.X+rect2.Max.X,
+		rect1.Max.Y+rect2.Max.Y,
+	)
+}
+
+func subtractRects(rect1 image.Rectangle, rect2 image.Rectangle) image.Rectangle {
+	return image.Rect(
+		rect1.Min.X-rect2.Min.X,
+		rect1.Min.Y-rect2.Min.Y,
+		rect1.Max.X-rect2.Max.X,
+		rect1.Max.Y-rect2.Max.Y,
+	)
 }
 
 func measureTextbox(box image.Rectangle, lines []string) image.Rectangle {
