@@ -129,7 +129,7 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 
 		fontSizes = append(fontSizes, fontsize)
 		lineDrawers = append(lineDrawers, lineDrawer)
-		drawnBounds = append(drawnBounds, fixedRectToRect(lineBounds))
+		drawnBounds = append(drawnBounds, lineBounds)
 	}
 
 	// Each drawer fontsize scaling was done independently
@@ -238,7 +238,7 @@ func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position te
 			imgBounds.Max.Y - box.Dy(),
 		}
 	default:
-		log.Fatal("unrecognized position option %d", position)
+		log.Fatalf("unrecognized position option %d", position)
 	}
 
 	return box.Add(targetMin.Sub(box.Min))
@@ -254,14 +254,7 @@ func unionRects(rects []image.Rectangle) image.Rectangle {
 	return union
 }
 
-func alignTextLinesDrawers(f *sfnt.Font, text string, dst draw.Image, textBoxBounds image.Rectangle) (font.Drawer, image.Rectangle) {
-	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
-
-	return drawer, fixedRectToRect(drawnBounds)
-}
-
 func splitRectangleLines(rect image.Rectangle, n int) []image.Rectangle {
-	// If not exact, just leave a gap - we will center later
 	newHeight := rect.Dy() / n
 
 	var lineBounds []image.Rectangle
@@ -348,7 +341,7 @@ func setDrawerFontsize(f *sfnt.Font, fontsize float64, text string, dst draw.Ima
 	return drawer, bounds
 }
 
-func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) (fontsize float64, drawer font.Drawer, bounds fixed.Rectangle26_6) {
+func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) (fontsize float64, drawer font.Drawer, bounds image.Rectangle) {
 	imgBounds := rect.Bounds()
 
 	startingDotX := imgBounds.Min.X
@@ -370,30 +363,16 @@ func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rec
 		Face: face,
 		Dot:  fixed.P(startingDotX, startingDotY),
 	}
-	bounds, _ = drawer.BoundString(text)
+	fixedBounds, _ := drawer.BoundString(text)
+	bounds = fixedRectToRect(fixedBounds)
 	fmt.Printf("Measured bounds: %+v\n", bounds)
 
-	for math.Abs(float64(bounds.Max.X.Ceil())-float64(bounds.Min.X.Floor())) < float64(imgBounds.Dx())*imageTextBoxPaddingScaler &&
-		math.Abs(float64(bounds.Max.Y.Ceil())-float64(bounds.Min.Y.Floor())) < float64(imgBounds.Dy())*imageTextBoxPaddingScaler {
+	for math.Abs(float64(bounds.Max.X)-float64(bounds.Min.X)) < float64(imgBounds.Dx())*imageTextBoxPaddingScaler &&
+		math.Abs(float64(bounds.Max.Y)-float64(bounds.Min.Y)) < float64(imgBounds.Dy())*imageTextBoxPaddingScaler {
 
 		fontsize = fontsize + 1
 
-		face, err = opentype.NewFace(f, &opentype.FaceOptions{
-			Size:    fontsize,
-			DPI:     72,
-			Hinting: font.HintingNone,
-		})
-		if err != nil {
-			log.Fatalf("NewFace: %v", err)
-		}
-
-		drawer = font.Drawer{
-			Dst:  dst,
-			Src:  image.White,
-			Face: face,
-			Dot:  fixed.P(startingDotX, startingDotY),
-		}
-		bounds, _ = drawer.BoundString(text)
+		drawer, bounds = setDrawerFontsize(f, fontsize, text, dst, rect)
 	}
 
 	fmt.Printf("fontsize: %f\n", fontsize)
