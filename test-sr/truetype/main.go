@@ -31,6 +31,15 @@ var urgencyColors = struct {
 	high:       image.NewUniform(color.RGBA{235, 0, 0, 255}),
 }
 
+type textboxPosition int
+
+const (
+	topLeft = iota
+	topRight
+	bottomLeft
+	bottomRight
+)
+
 type Editable interface {
 	image.Image
 	Set(x int, y int, c color.Color)
@@ -66,15 +75,10 @@ func main() {
 	dst := image.NewRGBA(img.Bounds())
 	draw.Draw(dst, dst.Bounds(), img, image.Point{}, draw.Src)
 
-	// dst := image.NewGray(image.Rect(0, 0, width, height))
-
-	// paddedBounds := scaledRect(image.Rect(
-	// 	0,
-	// 	0,
-	// 	dst.Rect.Max.X/3,
-	// 	dst.Rect.Max.Y/4), 0.8)
-
-	textBox := image.Rect(0, 0, dst.Rect.Max.X/2, dst.Rect.Max.Y/15)
+	textBox := image.Rect(0, 0,
+		int(float32(dst.Rect.Max.X)*0.75),
+		int(float32(dst.Rect.Max.Y)*0.1),
+	)
 
 	drawTextBox(f,
 		[]string{
@@ -108,44 +112,103 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 	textBoxBounds := rect.Bounds().Intersect(dst.Bounds())
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
+	// Divide the textbox space equally between lines
 	textLineBounds := splitRectangleLines(rect, len(lines))
 	fmt.Printf("split lines bounds: %+v\n", textLineBounds)
 
+	// Create a scaled drawer for each line of text
+	// Track the boundaries used by each drawer
+	var fontSizes []float64
 	var lineDrawers []font.Drawer
 	var drawnBounds []image.Rectangle
 	for i := range lines {
-		lineDrawer, lineBounds := alignTextLinesDrawers(f, lines[i], dst, textLineBounds[i])
+		fontsize, lineDrawer, lineBounds := scaleFontFaceSize(f, lines[i], dst, textLineBounds[i])
 
+		fontSizes = append(fontSizes, fontsize)
 		lineDrawers = append(lineDrawers, lineDrawer)
-		drawnBounds = append(drawnBounds, lineBounds)
+		drawnBounds = append(drawnBounds, fixedRectToRect(lineBounds))
 	}
 
+	// Each drawer fontsize scaling was done independently
+	// Align them so all text is rendered at same fontsize
+	smallestFontsize := math.MaxFloat64
+	for _, fontsize := range fontSizes {
+		if fontsize < smallestFontsize {
+			smallestFontsize = fontsize
+		}
+	}
+
+	// Update drawers and their bounds
+	for i := range lineDrawers {
+		lineDrawers[i], drawnBounds[i] = setDrawerFontsize(f, smallestFontsize, lines[i], dst, drawnBounds[i])
+	}
+
+	// Create textbox from union of all line boundaries
 	textBoxBounds = unionRects(drawnBounds)
 	fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
+	// Add padding
 	textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
 	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
 
+	// TODO: margin would need to be adjusted if allowed
+	// textBoxBounds = positionTextBox(textBoxBounds, dst.Bounds(), topLeft)
+
+	// Margin
+	marginTranslate := image.Point{
+		int(float64(dst.Bounds().Dx()) * 0.07),
+		int(float64(dst.Bounds().Dy()) * 0.07),
+	}
+
+	textBoxBounds = textBoxBounds.Add(marginTranslate)
+
+	// If applying margins and padding now, need to update drawer positions again
+	for i := range lineDrawers {
+		lineDrawers[i].Dot = lineDrawers[i].Dot.Add(
+			fixed.Point26_6{
+				X: fixed.I(marginTranslate.X),
+				Y: fixed.I(marginTranslate.Y),
+			},
+		)
+	}
+
+	// Draw textbox first, background element
 	drawTextboxBackground(dst, textBoxBounds)
 
+	// Draw each line on top
 	for i := range lineDrawers {
 		lineDrawers[i].Src = urgencyColors.mediumHigh
 		lineDrawers[i].DrawString(lines[i])
 	}
+}
 
-	// _, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
+// TODO this kind of works, but after textbox is shrunk to fit text looks strange
+func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position textboxPosition) image.Rectangle {
 
-	// centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
+	var targetMin image.Point
 
-	// // Update drawer bounds now that centred
-	// drawnBounds, _ = drawer.BoundString(text)
-	// textBoxBounds = fixedRectToRect(drawnBounds)
-	// fmt.Printf("textbox set to drawn bounds: %+v\n", textBoxBounds)
-	// textBoxBounds = scaleRect(textBoxBounds, 1.1, 2)
-	// fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
+	switch position {
+	case topLeft:
+		targetMin = image.Point{0, 0}
+	case topRight:
+		targetMin = image.Point{
+			imgBounds.Max.X - box.Dx(),
+			0,
+		}
+	case bottomLeft:
+		targetMin = image.Point{
+			0,
+			imgBounds.Max.Y - box.Dy(),
+		}
+	case bottomRight:
+		targetMin = image.Point{
+			imgBounds.Max.X - box.Dx(),
+			imgBounds.Max.Y - box.Dy(),
+		}
+	default:
+		log.Fatal("unrecognized position option %d", position)
+	}
 
-	// drawer.Src = urgencyColors.mediumHigh
-	// drawTextboxBackground(dst, textBoxBounds)
-	// drawer.DrawString(text)
+	return box.Add(targetMin.Sub(box.Min))
 }
 
 func unionRects(rects []image.Rectangle) image.Rectangle {
@@ -160,11 +223,6 @@ func unionRects(rects []image.Rectangle) image.Rectangle {
 
 func alignTextLinesDrawers(f *sfnt.Font, text string, dst draw.Image, textBoxBounds image.Rectangle) (font.Drawer, image.Rectangle) {
 	_, drawer, drawnBounds := scaleFontFaceSize(f, text, dst, textBoxBounds)
-
-	centerTextboxDrawer(&drawer, textBoxBounds, drawnBounds)
-
-	// Update drawer bounds now that centred
-	drawnBounds, _ = drawer.BoundString(text)
 
 	return drawer, fixedRectToRect(drawnBounds)
 }
@@ -231,13 +289,39 @@ func drawTextboxBackground(dst draw.Image, rect image.Rectangle) {
 	draw.DrawMask(dst, rect, image.Black, image.Point{}, mask, image.Point{}, draw.Over)
 }
 
-func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) (face font.Face, drawer font.Drawer, bounds fixed.Rectangle26_6) {
+func setDrawerFontsize(f *sfnt.Font, fontsize float64, text string, dst draw.Image, rect image.Rectangle) (drawer font.Drawer, bounds image.Rectangle) {
+	imgBounds := rect.Bounds()
+	startingDotX := imgBounds.Min.X
+	startingDotY := imgBounds.Max.Y
+
+	face, err := opentype.NewFace(f, &opentype.FaceOptions{
+		Size:    fontsize,
+		DPI:     72,
+		Hinting: font.HintingNone,
+	})
+	if err != nil {
+		log.Fatalf("NewFace: %v", err)
+	}
+
+	drawer = font.Drawer{
+		Dst:  dst,
+		Src:  image.White,
+		Face: face,
+		Dot:  fixed.P(startingDotX, startingDotY),
+	}
+	boundFixed, _ := drawer.BoundString(text)
+	bounds = fixedRectToRect(boundFixed)
+
+	return drawer, bounds
+}
+
+func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rectangle) (fontsize float64, drawer font.Drawer, bounds fixed.Rectangle26_6) {
 	imgBounds := rect.Bounds()
 
 	startingDotX := imgBounds.Min.X
 	startingDotY := imgBounds.Max.Y
 
-	fontsize := 1.
+	fontsize = 1.
 	face, err := opentype.NewFace(f, &opentype.FaceOptions{
 		Size:    fontsize,
 		DPI:     72,
@@ -281,7 +365,7 @@ func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rec
 
 	fmt.Printf("fontsize: %f\n", fontsize)
 
-	return face, drawer, bounds
+	return fontsize, drawer, bounds
 }
 
 func scaleFontFaceSizeAnalytical(f *sfnt.Font, text string, dst draw.Image) {
