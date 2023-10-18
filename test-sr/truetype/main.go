@@ -26,6 +26,13 @@ var (
 	HighUrgencyColor                    = color.RGBA{235, 0, 0, 255}
 )
 
+const (
+	imageLineHeightScaler     = 0.03
+	imageTextBoxWidthScaler   = 0.75
+	imageTextBoxPaddingScaler = 0.95
+	imageMarginScaler         = 0.07
+)
+
 type textboxPosition int
 
 const (
@@ -41,11 +48,6 @@ type Editable interface {
 }
 
 func main() {
-	const (
-		width  = 144 * 20
-		height = 72 * 15
-	)
-
 	f, err := opentype.Parse(goregular.TTF)
 	if err != nil {
 		log.Fatalf("Parse: %v", err)
@@ -150,7 +152,7 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 	// Add padding
 	paddingRect := subtractRects(
 		dst.Bounds(),
-		scaleRect(dst.Bounds(), 0.95, 0.95),
+		scaleRect(dst.Bounds(), imageTextBoxPaddingScaler, imageTextBoxPaddingScaler),
 	)
 
 	textBoxBounds = addRects(textBoxBounds, paddingRect)
@@ -161,8 +163,8 @@ func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectan
 
 	// Margin
 	marginTranslate := image.Point{
-		int(float64(dst.Bounds().Dx()) * 0.07),
-		int(float64(dst.Bounds().Dy()) * 0.07),
+		int(float64(dst.Bounds().Dx()) * imageMarginScaler),
+		int(float64(dst.Bounds().Dy()) * imageMarginScaler),
 	}
 
 	textBoxBounds = textBoxBounds.Add(marginTranslate)
@@ -206,11 +208,9 @@ func subtractRects(rect1 image.Rectangle, rect2 image.Rectangle) image.Rectangle
 }
 
 func measureTextbox(box image.Rectangle, lines []string) image.Rectangle {
-	lineHeightMul := 0.03
-
 	return image.Rect(0, 0,
-		int(float32(box.Max.X)*0.75),
-		int(float32(box.Max.Y)*(float32(lineHeightMul)*float32(len(lines)))),
+		int(float64(box.Max.X)*imageTextBoxWidthScaler),
+		int(float64(box.Max.Y)*(float64(imageLineHeightScaler)*float64(len(lines)))),
 	)
 }
 
@@ -373,8 +373,8 @@ func scaleFontFaceSize(f *sfnt.Font, text string, dst draw.Image, rect image.Rec
 	bounds, _ = drawer.BoundString(text)
 	fmt.Printf("Measured bounds: %+v\n", bounds)
 
-	for math.Abs(float64(bounds.Max.X.Ceil())-float64(bounds.Min.X.Floor())) < float64(imgBounds.Dx())*0.9 &&
-		math.Abs(float64(bounds.Max.Y.Ceil())-float64(bounds.Min.Y.Floor())) < float64(imgBounds.Dy())*0.9 {
+	for math.Abs(float64(bounds.Max.X.Ceil())-float64(bounds.Min.X.Floor())) < float64(imgBounds.Dx())*imageTextBoxPaddingScaler &&
+		math.Abs(float64(bounds.Max.Y.Ceil())-float64(bounds.Min.Y.Floor())) < float64(imgBounds.Dy())*imageTextBoxPaddingScaler {
 
 		fontsize = fontsize + 1
 
