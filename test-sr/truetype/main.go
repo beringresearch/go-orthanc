@@ -109,14 +109,14 @@ func main() {
 	}
 }
 
-func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, rect image.Rectangle, color color.Color) {
-	fmt.Printf("input rect: %+v\n", rect)
+func drawTextBox(f *sfnt.Font, lines []string, dst draw.Image, box image.Rectangle, color color.Color) {
+	fmt.Printf("input rect: %+v\n", box)
 	fmt.Printf("image bounds: %+v\n", dst.Bounds())
-	textBoxBounds := rect.Bounds().Intersect(dst.Bounds())
+	textBoxBounds := box.Bounds().Intersect(dst.Bounds())
 	fmt.Printf("text box bounds: %+v\n", textBoxBounds)
 
 	// Divide the textbox space equally between lines
-	textLineBounds := splitRectangleLines(rect, len(lines))
+	textLineBounds := splitRectangleLines(box, len(lines))
 	fmt.Printf("split lines bounds: %+v\n", textLineBounds)
 
 	// Create a scaled drawer for each line of text
