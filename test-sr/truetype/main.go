@@ -235,11 +235,10 @@ func measureTextbox(box image.Rectangle, lines []string) image.Rectangle {
 
 func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position textboxPosition) (image.Rectangle, image.Point) {
 
-	var targetMin image.Point
+	targetMin := image.Point{0, 0}
 
 	switch position {
 	case topLeft:
-		targetMin = image.Point{0, 0}
 	case topRight:
 		targetMin = image.Point{
 			imgBounds.Max.X - box.Dx(),
@@ -256,7 +255,7 @@ func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position te
 			imgBounds.Max.Y - box.Dy(),
 		}
 	default:
-		log.Fatalf("unrecognized position option %d", position)
+		log.Printf("unrecognized textboxPosition: %d", position)
 	}
 
 	translation := targetMin.Sub(box.Min)
