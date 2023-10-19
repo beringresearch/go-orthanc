@@ -111,7 +111,7 @@ func main() {
 	}
 }
 
-func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, direction textboxPosition, color color.Color) {
+func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, position textboxPosition, color color.Color) {
 	box := measureTextbox(dst.Bounds(), lines)
 
 	fmt.Printf("input rect: %+v\n", box)
@@ -163,14 +163,14 @@ func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, direction textbox
 	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
 
 	// Snap to a corner
-	textBoxBounds, snapTranslate := positionTextBox(textBoxBounds, dst.Bounds(), direction)
+	textBoxBounds, snapTranslate := positionTextBox(textBoxBounds, dst.Bounds(), position)
 	fmt.Printf("snap translate: %+v\n", snapTranslate)
 	fmt.Printf("textbox snapped: %+v\n", textBoxBounds)
 
 	// Margin
 
-	leftRightScaler := int(-(direction&0b01)*2 + 1)    // Left/right [1, -1]
-	topBottomScaler := int(-(direction&0b10>>1)*2 + 1) // Top/bottom: [1, -1]
+	leftRightScaler := int(-(position&0b01)*2 + 1)    // Left/right [1, -1]
+	topBottomScaler := int(-(position&0b10>>1)*2 + 1) // Top/bottom: [1, -1]
 	fmt.Println(leftRightScaler, topBottomScaler)
 
 	marginTranslate := image.Point{
@@ -284,13 +284,13 @@ func splitRectangleLines(rect image.Rectangle, n int, gapScaler float64) []image
 
 	var lineBounds []image.Rectangle
 
-	for i := rect.Min.Y; i <= rect.Max.Y-newHeight; i += newHeight + paddingPixels {
+	for y := rect.Min.Y; y <= rect.Max.Y-newHeight; y += newHeight + paddingPixels {
 		lineBounds = append(lineBounds,
 			image.Rect(
 				rect.Min.X,
-				i,
+				y,
 				rect.Max.X,
-				i+newHeight,
+				y+newHeight,
 			),
 		)
 	}
