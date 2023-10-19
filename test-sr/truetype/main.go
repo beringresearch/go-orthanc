@@ -88,12 +88,10 @@ func main() {
 		// "Risk of Bronchial NGT: LOW (5.0%)",
 	}
 
-	textBox := measureTextbox(dst.Bounds(), lines)
-
 	DrawTextBox(f,
 		lines,
 		dst,
-		textBox,
+		topLeft,
 		MediumHighUrgencyColor,
 	)
 
@@ -113,7 +111,9 @@ func main() {
 	}
 }
 
-func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, box image.Rectangle, color color.Color) {
+func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, direction textboxPosition, color color.Color) {
+	box := measureTextbox(dst.Bounds(), lines)
+
 	fmt.Printf("input rect: %+v\n", box)
 	fmt.Printf("image bounds: %+v\n", dst.Bounds())
 	textBoxBounds := box.Bounds().Intersect(dst.Bounds())
@@ -162,20 +162,35 @@ func DrawTextBox(f *sfnt.Font, lines []string, dst draw.Image, box image.Rectang
 	textBoxBounds = addRects(textBoxBounds, paddingRect)
 	fmt.Printf("textbox scaled: %+v\n", textBoxBounds)
 
-	// TODO: margin would need to be adjusted if allowed
-	// textBoxBounds = positionTextBox(textBoxBounds, dst.Bounds(), topLeft)
+	// Snap to a corner
+	textBoxBounds, snapTranslate := positionTextBox(textBoxBounds, dst.Bounds(), direction)
+	fmt.Printf("snap translate: %+v\n", snapTranslate)
+	fmt.Printf("textbox snapped: %+v\n", textBoxBounds)
 
 	// Margin
+
+	leftRightScaler := int(-(direction&0b01)*2 + 1)    // Left/right [1, -1]
+	topBottomScaler := int(-(direction&0b10>>1)*2 + 1) // Top/bottom: [1, -1]
+	fmt.Println(leftRightScaler, topBottomScaler)
+
 	marginTranslate := image.Point{
-		int(float64(dst.Bounds().Dx()) * imageMarginScaler),
-		int(float64(dst.Bounds().Dy()) * imageMarginScaler),
+		leftRightScaler * int(float64(dst.Bounds().Dx())*imageMarginScaler),
+		topBottomScaler * int(float64(dst.Bounds().Dy())*imageMarginScaler),
 	}
+
+	fmt.Println("margin translate: ", marginTranslate)
 
 	textBoxBounds = textBoxBounds.Add(marginTranslate)
 
-	// If applying margins and padding now, need to update drawer positions again
+	fmt.Printf("textbox with margin: %+v\n", textBoxBounds)
+
+	// Update drawer positions again following same transforms
 	for i := range lineDrawers {
 		lineDrawers[i].Dot = lineDrawers[i].Dot.Add(
+			fixed.Point26_6{
+				X: fixed.I(snapTranslate.X),
+				Y: fixed.I(snapTranslate.Y),
+			}).Add(
 			fixed.Point26_6{
 				X: fixed.I(marginTranslate.X),
 				Y: fixed.I(marginTranslate.Y),
@@ -218,8 +233,7 @@ func measureTextbox(box image.Rectangle, lines []string) image.Rectangle {
 	)
 }
 
-// TODO this kind of works, but after textbox is shrunk to fit text looks strange
-func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position textboxPosition) image.Rectangle {
+func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position textboxPosition) (image.Rectangle, image.Point) {
 
 	var targetMin image.Point
 
@@ -245,7 +259,9 @@ func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position te
 		log.Fatalf("unrecognized position option %d", position)
 	}
 
-	return box.Add(targetMin.Sub(box.Min))
+	translation := targetMin.Sub(box.Min)
+
+	return box.Add(translation), translation
 }
 
 func unionRects(rects []image.Rectangle) image.Rectangle {
