@@ -36,10 +36,10 @@ const (
 type textboxPosition int
 
 const (
-	topLeft textboxPosition = iota
-	topRight
-	bottomLeft
-	bottomRight
+	TopLeftCorner textboxPosition = iota
+	TopRightCorner
+	BottomLeftCorner
+	BottomRightCorner
 )
 
 type Editable interface {
@@ -91,7 +91,7 @@ func main() {
 	DrawTextBox(f,
 		lines,
 		dst,
-		topLeft,
+		TopLeftCorner,
 		MediumHighUrgencyColor,
 	)
 
@@ -238,18 +238,18 @@ func positionTextBox(box image.Rectangle, imgBounds image.Rectangle, position te
 	targetMin := image.Point{0, 0}
 
 	switch position {
-	case topLeft:
-	case topRight:
+	case TopLeftCorner:
+	case TopRightCorner:
 		targetMin = image.Point{
 			imgBounds.Max.X - box.Dx(),
 			0,
 		}
-	case bottomLeft:
+	case BottomLeftCorner:
 		targetMin = image.Point{
 			0,
 			imgBounds.Max.Y - box.Dy(),
 		}
-	case bottomRight:
+	case BottomRightCorner:
 		targetMin = image.Point{
 			imgBounds.Max.X - box.Dx(),
 			imgBounds.Max.Y - box.Dy(),
